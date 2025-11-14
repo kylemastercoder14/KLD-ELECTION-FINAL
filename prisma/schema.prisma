@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * ============================================
+ * ENUMS
+ * ============================================
+ */
+
+/// System roles
+enum UserRole {
+  SUPERADMIN // Manages logs & backup
+  ADMIN // School / System Admin
+  COMELEC // Election administrator
+  POLL_WATCHER // Assigned to observe elections
+  USER // Regular user (Student / Faculty / Staff)
+}
+
+enum UserType {
+  STUDENT
+  FACULTY
+  NON_TEACHING
+}
+
+enum ElectionStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum CandidateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VoterRestriction {
+  ALL // Everyone can vote
+  STUDENTS // Only students can vote
+  FACULTY // Only faculty can vote
+  NON_TEACHING // Only non-teaching staff can vote
+  STUDENTS_FACULTY // Students and faculty (excluding non-teaching)
+}
+
+/**
+ * ============================================
+ * USER AUTH MODELS (Optional for NextAuth)
+ * ============================================
+ */
+
+/// Primary user identity (students, faculty, staff)
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String?
+  password      String?
+  image         String?
+  userId        String?   @unique // Student/Employee ID
+  name          String
+  role          UserRole  @default(USER)
+  userType      UserType  @default(NON_TEACHING)
+  emailVerified DateTime?
+  status        String    @default("Pending")
+  isActive      Boolean   @default(true)
+  partyId       String?
+
+  /// Student Meta
+  year    String? // 1, 2, 3, 4
+  course  String?
+  section String?
+
+  /// Faculty Meta
+  institute  String?
+  department String?
+  position   String? // e.g. Professor II
+
+  /// Non-teaching Meta
+  unit String?
+
+  // Relationships
+  accounts      Account[]
+  sessions      Session[]
+  backupHistory BackupHistory[]
+
+  candidate        Candidate?
+  votes            Vote[]
+  createdElections Election[]  @relation("ElectionCreator")
+  logs             SystemLog[]
+  partyApplications PartyApplication[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+/// OAuth accounts → NextAuth support
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+}
+
+/// Used for login sessions
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Email verification tokens
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
+/**
+ * ============================================
+ * ELECTION MODELS
+ * ============================================
+ */
+
+/// Generic election definition
+model Election {
+  id          String @id @default(uuid())
+  title       String
+  description String
+
+  campaignStartDate DateTime
+  campaignEndDate   DateTime
+  electionStartDate DateTime
+  electionEndDate   DateTime
+
+  status   ElectionStatus @default(UPCOMING)
+  isActive Boolean        @default(true)
+  isOfficial Boolean @default(false)
+
+  /// Who may vote: ALL, STUDENTS, FACULTY, NON_TEACHING, STUDENTS_FACULTY
+  voterRestriction VoterRestriction @default(ALL)
+
+  // Relationships
+  positions  Position[]
+  candidates Candidate[]
+  votes      Vote[]
+
+  createdBy     String
+  createdByUser User   @relation("ElectionCreator", fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Reusable position templates that can be used when creating elections
+model PositionTemplate {
+  id          String  @id @default(uuid())
+  name        String  @unique // Template name (e.g. "Student Council", "Class Officers")
+  description String? // Optional description of the template
+  isActive    Boolean @default(true)
+
+  // Template items (positions included in this template)
+  items PositionTemplateItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Individual position items within a template
+model PositionTemplateItem {
+  id           String @id @default(uuid())
+  templateId   String
+  title        String // e.g. President, Secretary
+  winnerCount  Int    @default(1) // How many winners for this position
+  displayOrder Int    @default(0) // Order in which positions appear
+
+  // Relationships
+  template PositionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Specific positions (President, Secretary, etc.) for an election
+model Position {
+  id         String @id @default(uuid())
+  electionId String
+
+  title       String // e.g. President
+  winnerCount Int // How many winners (ex: Board Members = 3)
+
+  // Relationships
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+  votes      Vote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Political party
+model Party {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  logoUrl     String?
+  isActive    Boolean @default(true)
+
+  applications PartyApplication[] // <- new relation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PartyApplication {
+  id      String @id @default(uuid())
+  userId  String
+  partyId String
+  status  String @default("PENDING") // PENDING, APPROVED, REJECTED
+
+  user  User  @relation(fields: [userId], references: [id])
+  party Party @relation(fields: [partyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Candidate → Maps a user to an election + position
+model Candidate {
+  id String @id @default(uuid())
+
+  userId     String  @unique
+  positionId String
+  electionId String
+  isActive   Boolean @default(true)
+
+  // Meta
+  platform String
+  imageUrl String?
+  status   CandidateStatus @default(PENDING)
+
+  // Relationships
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Vote record
+model Vote {
+  id          String   @id @default(uuid())
+  voterId     String
+  candidateId String
+  electionId  String
+  positionId  String
+  createdAt   DateTime @default(now())
+
+  voter     User      @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  election  Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position  Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  /// UPDATED: Prevent voting for the same candidate twice in an election
+  /// This allows multiple votes per position (for positions with winnerCount > 1)
+  @@unique([voterId, electionId, candidateId])
+
+  /// Optional: Add index for better query performance
+  @@index([voterId, electionId])
+  @@index([positionId, candidateId])
+}
+
+/**
+ * ============================================
+ * SYSTEM LOGGING
+ * ============================================
+ */
+
+/// System logs for admin auditing
+model SystemLog {
+  id        String   @id @default(uuid())
+  action    String // e.g. "Created Election"
+  userId    String?
+  details   String?
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+/**
+ * ============================================
+ * BACKUP DATABASE
+ * ============================================
+ */
+
+/// System backup history records
+enum BackupStatus {
+  SUCCESS
+  FAILED
+  IN_PROGRESS
+}
+
+model BackupHistory {
+  id String @id @default(cuid())
+
+  /// Backup action name (e.g. "DB_BACKUP", "LOG_EXPORT")
+  action String
+
+  /// File name where the backup is stored
+  filename String
+
+  /// Status: SUCCESS / FAILED / IN_PROGRESS
+  status BackupStatus
+
+  /// Optional — User who initiated backup
+  triggeredBy String?
+  user        User?   @relation(fields: [triggeredBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+}
