@@ -1,11 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    // Ensure election.status reflects schedule before aggregating stats
+    await syncElectionStatusesToNow();
+
     // Fetch all comprehensive statistics in parallel
     const [
       // Basic counts

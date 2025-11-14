@@ -5,8 +5,11 @@ import { columns } from "./_components/columns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ElectionStatus } from "@prisma/client";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const Page = async () => {
+  await syncElectionStatusesToNow();
+
   const elections = await db.election.findMany({
     orderBy: {
       createdAt: "desc",

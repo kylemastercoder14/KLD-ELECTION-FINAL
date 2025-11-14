@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import db from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { sendVoteToEmail } from "@/hooks/use-email-template";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 export async function POST(
   req: NextRequest,
@@ -31,6 +32,9 @@ export async function POST(
     const { id: electionId } = await params;
 
     const abstainSet = new Set<string>(abstainPositions || []);
+
+    // Keep election.status in sync with its schedule before any validation
+    await syncElectionStatusesToNow();
 
     // Validate votes object
     if (!votes || typeof votes !== "object") {

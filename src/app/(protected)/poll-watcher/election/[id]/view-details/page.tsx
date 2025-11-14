@@ -2,6 +2,7 @@ import db from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 import {
   Table,
   TableBody,
@@ -27,6 +28,9 @@ const Page = async (props: {
   }>;
 }) => {
   const params = await props.params;
+
+  await syncElectionStatusesToNow();
+
   const election = await db.election.findUnique({
     where: { id: params.id },
     include: {

@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getStatusVariant } from "@/lib/utils";
 import { format } from "date-fns";
 import PositionsTable from "./positions-table";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const voterRestrictionLabels: Record<string, string> = {
   ALL: "All",
@@ -20,6 +21,9 @@ const Page = async (props: {
   }>;
 }) => {
   const params = await props.params;
+
+  await syncElectionStatusesToNow();
+
   const election = await db.election.findUnique({
     where: { id: params.id },
     include: {

@@ -1,6 +1,7 @@
 import db from "@/lib/db";
 import { notFound } from "next/navigation";
 import Client from "./client";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const Page = async (props: {
   params: Promise<{
@@ -8,6 +9,9 @@ const Page = async (props: {
   }>;
 }) => {
   const params = await props.params;
+
+  await syncElectionStatusesToNow();
+
   const election = await db.election.findUnique({
     where: { id: params.id },
     include: {

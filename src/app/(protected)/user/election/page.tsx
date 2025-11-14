@@ -7,12 +7,16 @@ import Heading from "@/components/heading";
 import { User } from "@prisma/client";
 import { DataTable } from "@/components/data-table";
 import { columns } from "./_components/columns";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const Page = async () => {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/auth/sign-in");
 
   const today = new Date();
+
+  // Keep election.status in sync with its schedule before showing available elections
+  await syncElectionStatusesToNow();
   const startOfToday = new Date(
     Date.UTC(
       today.getUTCFullYear(),
@@ -43,6 +47,7 @@ const Page = async () => {
     include: {
       createdByUser: true,
       positions: true,
+      candidates: true
     },
   });
 

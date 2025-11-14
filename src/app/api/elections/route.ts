@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import { ElectionStatus } from "@prisma/client";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get("status");
+
+    // Ensure election.status reflects start/end dates before querying
+    await syncElectionStatusesToNow();
 
     const where: { status?: ElectionStatus } = {};
 

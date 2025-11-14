@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  await syncElectionStatusesToNow();
 
   const election = await db.election.findUnique({
     where: { id },

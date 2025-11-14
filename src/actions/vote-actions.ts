@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import { canUserVote } from "@/lib/voter-utils";
+import { syncElectionStatusesToNow } from "@/lib/election-status";
 import { z } from "zod";
 
 const VoteValidator = z.object({
@@ -27,6 +28,9 @@ export const submitVote = async (values: z.infer<typeof VoteValidator>) => {
 
     // Validate input
     const validatedData = VoteValidator.parse(values);
+
+    // Ensure election.status matches its schedule before loading
+    await syncElectionStatusesToNow();
 
     // Fetch the election with voter restriction
     const election = await db.election.findUnique({
