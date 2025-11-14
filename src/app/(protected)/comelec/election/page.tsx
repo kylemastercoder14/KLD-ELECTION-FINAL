@@ -20,6 +20,7 @@ const Page = async () => {
     include: {
       positions: true,
       createdByUser: true,
+      candidates: true
     },
   });
 
