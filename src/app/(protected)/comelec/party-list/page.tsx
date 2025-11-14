@@ -11,7 +11,21 @@ import { ApplicationColumns } from "./_components/application-columns";
 
 const Page = async () => {
   const parties = await db.party.findMany({
-    include: { applications: true },
+    include: {
+      applications: {
+        include: {
+          user: {
+            include: {
+              candidate: {
+                include: {
+                  position: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -23,7 +37,9 @@ const Page = async () => {
     orderBy: { createdAt: "desc" },
   });
 
-  const pendingApplications = applications.filter((a) => a.status === "PENDING");
+  const pendingApplications = applications.filter(
+    (a) => a.status === "PENDING"
+  );
 
   const activeParties = parties.filter((e) => e.isActive);
   const archivedParties = parties.filter((e) => !e.isActive);
@@ -87,7 +103,10 @@ const Page = async () => {
           </TabsContent>
 
           <TabsContent value="applications">
-            <DataTable columns={ApplicationColumns} data={pendingApplications} />
+            <DataTable
+              columns={ApplicationColumns}
+              data={pendingApplications}
+            />
           </TabsContent>
         </Tabs>
       </div>
