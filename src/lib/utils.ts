@@ -86,3 +86,5 @@ export function timeAgo(date: Date | string) {
 
   return `${value} ${unit}${value > 1 ? "s" : ""} ago`;
 }
+
+export const getData = () => {};
