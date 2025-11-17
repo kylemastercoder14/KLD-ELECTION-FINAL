@@ -11,6 +11,7 @@ import db from "@/lib/db";
 import { sendAccountToEmail } from "@/hooks/use-email-template";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function updateUserMeta(formData: {
   year?: string | null;
@@ -467,6 +468,8 @@ export const createElection = async (
       `Election created: ${validatedData.title}`
     );
 
+    revalidatePath("/comelec/election");
+
     return { success: "Election created successfully.", data: response };
   } catch (error) {
     console.error(error);
@@ -530,6 +533,8 @@ export const updateElection = async (
       `Election updated: ${response.title}`
     );
 
+    revalidatePath("/comelec/election");
+
     return {
       success: "Election updated successfully.",
       data: response,
@@ -566,6 +571,8 @@ export const deleteElection = async (id: string) => {
       `Election deleted: ${election.title}`
     );
 
+    revalidatePath("/comelec/election");
+
     return { success: "Election deleted successfully." };
   } catch (error) {
     console.error(error);
@@ -594,6 +601,8 @@ export const createPartyList = async (
         logoUrl: validatedData.logo,
       },
     });
+
+    revalidatePath("/comelec/party-list");
 
     return { success: "Party-list created successfully.", data: response };
   } catch (error) {
@@ -628,6 +637,8 @@ export const updatePartyList = async (
       },
     });
 
+    revalidatePath("/comelec/party-list");
+
     return { success: "Party-list updated successfully.", data: response };
   } catch (error) {
     console.error(error);
@@ -656,6 +667,8 @@ export const archivePartyList = async (id: string, isActive: boolean) => {
       session?.user?.id,
       `Party ${successText}: ${response.name}`
     );
+
+    revalidatePath("/comelec/party-list");
 
     return { success: `Party ${successText} successfully`, data: response };
   } catch (error) {
@@ -694,6 +707,8 @@ export async function applyPartyAction(partyId: string) {
       },
     });
 
+    revalidatePath("/user/party-list");
+
     return {
       success: true,
       message: "Application submitted! Please wait for COMELEC approval.",
@@ -717,6 +732,8 @@ export async function updatePartyApplicationStatus(
       data: { status },
     });
 
+    revalidatePath("/comelec/party-list");
+
     return {
       success: true,
       message: `Application ${status.toLowerCase()} successfully.`,
@@ -736,6 +753,8 @@ export async function updateCandidateStatus(
       where: { id },
       data: { status },
     });
+
+    revalidatePath("/comelec/party-list");
 
     return {
       success: true,
