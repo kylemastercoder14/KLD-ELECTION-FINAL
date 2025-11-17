@@ -31,7 +31,7 @@ const Page = async () => {
       <div className="flex items-center justify-between">
         <Heading
           title="Manage Elections"
-          description="Overview of all elections. You can create, edit, delete and change the status of elections."
+          description="Overview of all elections. You can create, edit, archive, retrieve and change the status of elections."
         />
         <Button size="sm">
           <Link
