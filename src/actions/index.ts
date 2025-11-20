@@ -1068,3 +1068,45 @@ export async function updateCandidateStatus(
     return { success: false, message: "Failed to update candidate status." };
   }
 }
+
+export async function applyPartyAction(partyId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, message: "You must be logged in to apply." };
+    }
+
+    const userId = session.user.id;
+
+    // Check if already applied or a member
+    const existing = await db.partyApplication.findFirst({
+      where: { userId, partyId },
+    });
+
+    if (existing) {
+      return {
+        success: false,
+        message: "You have already applied or are a member of this party.",
+      };
+    }
+
+    // Create application
+    await db.partyApplication.create({
+      data: {
+        userId,
+        partyId,
+        status: "PENDING",
+      },
+    });
+
+    revalidatePath("/user/party-list");
+
+    return {
+      success: true,
+      message: "Application submitted! Please wait for COMELEC approval.",
+    };
+  } catch (error) {
+    console.error("Apply party error:", error);
+    return { success: false, message: "An unexpected error occurred." };
+  }
+}
