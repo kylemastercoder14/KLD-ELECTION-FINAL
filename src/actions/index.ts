@@ -1046,3 +1046,25 @@ export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
     };
   }
 };
+
+export async function updateCandidateStatus(
+  id: string,
+  status: "APPROVED" | "REJECTED"
+) {
+  try {
+    await db.candidate.update({
+      where: { id },
+      data: { status },
+    });
+
+    revalidatePath("/comelec/party-list");
+
+    return {
+      success: true,
+      message: `Candidate ${status.toLowerCase()} successfully.`,
+    };
+  } catch (error) {
+    console.error("Failed to update candidate status:", error);
+    return { success: false, message: "Failed to update candidate status." };
+  }
+}
