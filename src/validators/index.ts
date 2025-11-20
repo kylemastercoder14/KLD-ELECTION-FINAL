@@ -1,4 +1,4 @@
-import { UserRole, VoterRestriction } from "@prisma/client";
+import { UserRole, UserType, VoterRestriction } from "@prisma/client";
 import z from "zod";
 
 export const ElectionPositionValidator = z.object({
@@ -90,6 +90,7 @@ export const UserValidators = z.object({
     .string()
     .min(1, { message: "Student/employee number is required." }),
   role: z.enum(UserRole),
+  userType: z.enum(UserType),
   password: z
     .string()
     .min(6, { message: "Password must be at least 6 characters." }),
