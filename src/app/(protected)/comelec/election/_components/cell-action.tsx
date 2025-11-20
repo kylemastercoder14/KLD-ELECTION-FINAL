@@ -7,7 +7,8 @@ import {
   FileTextIcon,
   MoreHorizontal,
   ArchiveIcon,
-  RefreshCcw
+  RefreshCcw,
+  CheckCircle2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,12 +24,14 @@ import { useRouter } from "next/navigation";
 import { ElectionWithProps } from '@/types/interface';
 import AlertModal from "@/components/alert-modal";
 import { toast } from "sonner";
-import { archiveElection } from "@/actions";
+import { archiveElection, markElectionAsOfficial } from "@/actions";
 
 const CellAction = ({ election }: { election: ElectionWithProps }) => {
   const router = useRouter();
   const [openArchive, setOpenArchive] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [markOfficialOpen, setMarkOfficialOpen] = React.useState(false);
+  const [markOfficialLoading, setMarkOfficialLoading] = React.useState(false);
 
   async function handleArchive() {
     setLoading(true);
@@ -50,6 +53,24 @@ const CellAction = ({ election }: { election: ElectionWithProps }) => {
     }
   }
 
+  async function handleMarkOfficial() {
+    setMarkOfficialLoading(true);
+    try {
+      const response = await markElectionAsOfficial(election.id);
+      if (response?.error) {
+        toast.error(response.error);
+        return;
+      }
+      toast.success(response?.success || "Election marked as official.");
+      router.refresh();
+    } catch {
+      toast.error("Failed to mark election as official. Please try again.");
+    } finally {
+      setMarkOfficialLoading(false);
+      setMarkOfficialOpen(false);
+    }
+  }
+
   return (
     <>
       <AlertModal
@@ -62,6 +83,14 @@ const CellAction = ({ election }: { election: ElectionWithProps }) => {
           "Are you sure you want to archive this election? This action can be undone." :
           "Are you sure you want to restore this election?"
         }
+      />
+      <AlertModal
+        isOpen={markOfficialOpen}
+        onClose={() => setMarkOfficialOpen(false)}
+        onConfirm={handleMarkOfficial}
+        loading={markOfficialLoading}
+        title="Mark Election as Official"
+        description="This will finalize the election results and set the status to completed. This action cannot be undone."
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -82,6 +111,13 @@ const CellAction = ({ election }: { election: ElectionWithProps }) => {
             <FileTextIcon className="size-4" />
             View details
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {!election.isOfficial && (
+            <DropdownMenuItem onClick={() => setMarkOfficialOpen(true)}>
+              <CheckCircle2 className="size-4" />
+              Mark as official
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           {election.isActive ? (
             <DropdownMenuItem onClick={() => setOpenArchive(true)}>

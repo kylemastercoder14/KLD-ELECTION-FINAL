@@ -39,7 +39,7 @@ import { usePathname } from "next/navigation";
 const menuItems = {
   SUPERADMIN: [
     { title: "Dashboard", url: "/superadmin/dashboard", icon: BarChart3 },
-    { title: "Elections", url: "/superadmin/elections", icon: Calendar },
+    { title: "Elections", url: "/superadmin/election", icon: Calendar },
     { title: "Partylist", url: "/superadmin/party-list", icon: Building },
     { title: "Candidates", url: "/superadmin/candidates", icon: UserCheck },
     { title: "Accounts", url: "/superadmin/accounts", icon: UserCog },
@@ -49,11 +49,10 @@ const menuItems = {
   ],
   ADMIN: [
     { title: "Dashboard", url: "/admin/dashboard", icon: BarChart3 },
-    { title: "Elections", url: "/admin/elections", icon: Calendar },
+    { title: "Elections", url: "/admin/election", icon: Calendar },
     { title: "Partylist", url: "/admin/party-list", icon: Building },
     { title: "Candidates", url: "/admin/candidates", icon: UserCheck },
     { title: "Accounts", url: "/admin/accounts", icon: UserCog },
-    { title: "Settings", url: "/admin/settings", icon: Settings },
   ],
   COMELEC: [
     { title: "Dashboard", url: "/comelec/dashboard", icon: BarChart3 },
@@ -61,17 +60,15 @@ const menuItems = {
     { title: "Partylist", url: "/comelec/party-list", icon: Building },
     { title: "Position Templates", url: "/comelec/position-templates", icon: LayoutPanelTop },
     { title: "Candidates", url: "/comelec/candidates", icon: UserCheck },
-    { title: "Results", url: "/comelec/results", icon: Trophy },
   ],
   POLL_WATCHER: [
     { title: "Dashboard", url: "/poll-watcher/dashboard", icon: BarChart3 },
-    { title: "Monitor Elections", url: "/poll-watcher/elections", icon: Vote },
+    { title: "Monitor Elections", url: "/poll-watcher/election", icon: Vote },
     { title: "Candidates", url: "/poll-watcher/candidates", icon: UserCheck },
-    { title: "Results", url: "/poll-watcher/results", icon: Trophy },
   ],
   USER: [
     { title: "Dashboard", url: "/user/dashboard", icon: BarChart3 },
-    { title: "Elections", url: "/user/elections", icon: Vote },
+    { title: "Elections", url: "/user/election", icon: Vote },
     { title: "Candidacy Application", url: "/user/candidacy-application", icon: UserPlus },
     { title: "My Votes", url: "/user/votes", icon: Trophy },
   ],

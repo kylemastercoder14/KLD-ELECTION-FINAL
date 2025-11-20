@@ -176,6 +176,30 @@ export const columns: ColumnDef<ElectionWithProps>[] = [
     },
   },
   {
+    accessorKey: "isOfficial",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Official
+        <ChevronsUpDown className="h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const isOfficial = row.original.isOfficial;
+      return (
+        <Badge
+          variant={isOfficial ? "success" : "warning"}
+          className="ml-2.5 uppercase tracking-wide"
+        >
+          {isOfficial ? "Official" : "Unofficial"}
+        </Badge>
+      );
+    },
+    enableSorting: false,
+  },
+  {
     accessorKey: "actions",
     header: ({ column }) => {
       return (

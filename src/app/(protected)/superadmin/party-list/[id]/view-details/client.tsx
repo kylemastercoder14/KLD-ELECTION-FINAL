@@ -45,9 +45,7 @@ const ViewDetails = ({
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Party Not Found
-            </h1>
+            <h1 className="text-2xl font-bold">Party Not Found</h1>
           </div>
           <Card>
             <CardContent className="p-8 text-center">
@@ -73,11 +71,11 @@ const ViewDetails = ({
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Party Details</h1>
+          <h1 className="text-2xl font-bold">Party Details</h1>
         </div>
 
-        <div className="grid lg:grid-cols-5 grid-cols-1 gap-5">
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 gap-5">
+          <div className="space-y-5">
             {/* Party Information Card */}
             <Card>
               <CardHeader className="pb-4">
@@ -101,10 +99,10 @@ const ViewDetails = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                        <h2 className="text-3xl font-bold mb-2">
                           {initialData.name}
                         </h2>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                           <div className="flex items-center gap-1">
                             <Users className="h-4 w-4" />
                             <span>
@@ -126,7 +124,7 @@ const ViewDetails = ({
                         </div>
                         {initialData.description && (
                           <div
-                            className="text-gray-700 prose prose-lg space-y-4 leading-relaxed max-w-3xl"
+                            className="text-muted-foreground prose prose-lg space-y-4 leading-relaxed max-w-3xl"
                             dangerouslySetInnerHTML={{
                               __html: initialData.description || "",
                             }}
@@ -138,12 +136,65 @@ const ViewDetails = ({
                 </div>
               </CardHeader>
             </Card>
-          </div>
-          <div className="lg:col-span-2">
+
+            {/* ------------------------ */}
+            {/* HEAD / MANAGER ON TOP   */}
+            {/* ------------------------ */}
+
+            {initialData.head ? (
+              <Card>
+                <CardContent>
+                  <div className="flex items-start gap-4 mb-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage
+                        src={initialData.head?.image || ""}
+                        alt={initialData.head?.name || "Head"}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-linear-to-br from-blue-400 to-purple-500 text-white">
+                        {getInitials(initialData.head?.name || "Head")}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">
+                        {initialData.head?.name}
+                      </h3>
+
+                      {/* Static Role Label */}
+                      <p className="text-sm text-muted-foreground">
+                        Head / Manager
+                      </p>
+                    </div>
+
+                    <Badge
+                      className="text-xs uppercase bg-green-100 text-green-800 border-green-200"
+                      variant="outline"
+                    >
+                      APPROVED
+                    </Badge>
+                  </div>
+
+                  {/* Fallback message if no candidate data */}
+                  {!initialData.head?.candidate && (
+                    <div className="mb-4 text-sm text-muted-foreground">
+                      No candidate profile available for this head.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-6 text-muted-foreground">
+                  No head/manager assigned yet.
+                </CardContent>
+              </Card>
+            )}
+
             {/* Candidates Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
+                <CardTitle className="text-xl flex items-center gap-2">
                   <Users className="h-5 w-5" />
                   Candidates (
                   {initialData.applications?.filter(
@@ -169,7 +220,11 @@ const ViewDetails = ({
                           <div className="flex items-start gap-4 mb-4">
                             <Avatar className="h-12 w-12">
                               <AvatarImage
-                                src={candidate.user.image || candidate.user.candidate?.imageUrl || ""}
+                                src={
+                                  candidate.user.image ||
+                                  candidate.user.candidate?.imageUrl ||
+                                  ""
+                                }
                                 alt={candidate.user?.name}
                                 className="object-cover"
                               />
@@ -178,10 +233,10 @@ const ViewDetails = ({
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 truncate">
+                              <h3 className="font-semibold truncate">
                                 {candidate.user?.name || "Unknown Candidate"}
                               </h3>
-                              <p className="text-sm text-gray-600 mb-2">
+                              <p className="text-sm text-muted-foreground mb-2">
                                 {candidate.user.position}
                               </p>
                             </div>
@@ -197,11 +252,11 @@ const ViewDetails = ({
 
                           {candidate.user.candidate?.platform && (
                             <div className="mb-4">
-                              <p className="text-sm text-gray-600 font-medium mb-1">
+                              <p className="text-sm font-medium mb-1">
                                 Platform:
                               </p>
                               <div
-                                className={`text-sm text-gray-700 leading-relaxed transition-all duration-200 ${
+                                className={`text-sm leading-relaxed space-y-2 transition-all duration-200 ${
                                   expandedPlatforms[candidate.id]
                                     ? ""
                                     : "line-clamp-3"
@@ -229,7 +284,7 @@ const ViewDetails = ({
                           )}
 
                           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>

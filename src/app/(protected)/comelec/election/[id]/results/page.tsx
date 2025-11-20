@@ -3,7 +3,14 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Trophy, Users, UserCheck, UserX, Printer, CheckCircle2 } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  UserCheck,
+  UserX,
+  Printer,
+  CheckCircle2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -31,7 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useReactToPrint } from "react-to-print";
-import { ElectionStatus } from '@prisma/client';
+import { ElectionStatus } from "@prisma/client";
 
 // Skeleton loader
 const SkeletonCard = () => (
@@ -231,7 +238,9 @@ const LiveResultsPage: React.FC = () => {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success(result.success || "Election marked as official successfully");
+        toast.success(
+          result.success || "Election marked as official successfully"
+        );
         // Refresh the results
         await fetchResults(false);
         router.refresh();
@@ -277,8 +286,7 @@ const LiveResultsPage: React.FC = () => {
 
   const canMarkAsOfficial =
     session?.user?.role === "COMELEC" || session?.user?.role === "POLL_WATCHER";
-  const isElectionCompleted = election.status === "COMPLETED";
-  const canMarkOfficial = canMarkAsOfficial && isElectionCompleted && !election.isOfficial;
+  const canMarkOfficial = canMarkAsOfficial && !election.isOfficial;
 
   return (
     <div>
@@ -288,7 +296,9 @@ const LiveResultsPage: React.FC = () => {
           <Button
             onClick={() => {
               if (!printRef.current) {
-                toast.error("Content not ready for printing. Please try again.");
+                toast.error(
+                  "Content not ready for printing. Please try again."
+                );
                 return;
               }
               handlePrint();
@@ -318,11 +328,14 @@ const LiveResultsPage: React.FC = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Mark Election as Official</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to mark this election as official? This action will:
+                  Are you sure you want to mark this election as official? This
+                  action will:
                   <ul className="mt-2 list-disc pl-5 space-y-1">
                     <li>Set the election status to COMPLETED</li>
                     <li>Mark the results as official</li>
-                    <li>Make the results publicly visible with candidate names</li>
+                    <li>
+                      Make the results publicly visible with candidate names
+                    </li>
                   </ul>
                   <strong className="mt-2 block text-foreground">
                     This action cannot be undone.
@@ -336,7 +349,6 @@ const LiveResultsPage: React.FC = () => {
                 <AlertDialogAction
                   onClick={handleMarkAsOfficial}
                   disabled={isMarkingOfficial}
-                  className="bg-primary"
                 >
                   {isMarkingOfficial ? "Marking..." : "Mark as Official"}
                 </AlertDialogAction>
@@ -354,11 +366,15 @@ const LiveResultsPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-2">{election.title}</h2>
           <div className="text-sm space-y-1">
             <p>
-              <strong>Status:</strong> {election.isOfficial ? "OFFICIAL RESULTS" : "UNOFFICIAL / PARTIAL RESULTS"}
+              <strong>Status:</strong>{" "}
+              {election.isOfficial
+                ? "OFFICIAL RESULTS"
+                : "UNOFFICIAL / PARTIAL RESULTS"}
             </p>
             {lastUpdated && (
               <p>
-                <strong>Report Generated:</strong> {lastUpdated.toLocaleString()}
+                <strong>Report Generated:</strong>{" "}
+                {lastUpdated.toLocaleString()}
               </p>
             )}
           </div>
@@ -380,30 +396,52 @@ const LiveResultsPage: React.FC = () => {
               <tr className="bg-gray-100">
                 <th className="border border-black p-2 text-left">Metric</th>
                 <th className="border border-black p-2 text-right">Count</th>
-                <th className="border border-black p-2 text-right">Percentage</th>
+                <th className="border border-black p-2 text-right">
+                  Percentage
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border border-black p-2 font-medium">Total Eligible Voters</td>
-                <td className="border border-black p-2 text-right">{turnout.totalVoters}</td>
+                <td className="border border-black p-2 font-medium">
+                  Total Eligible Voters
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {turnout.totalVoters}
+                </td>
                 <td className="border border-black p-2 text-right">100.0%</td>
               </tr>
               <tr>
                 <td className="border border-black p-2 font-medium">Voted</td>
-                <td className="border border-black p-2 text-right">{turnout.votedCount}</td>
-                <td className="border border-black p-2 text-right">{turnout.percentage}%</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 font-medium">Not Voted</td>
-                <td className="border border-black p-2 text-right">{turnout.notVotedCount}</td>
                 <td className="border border-black p-2 text-right">
-                  {((turnout.notVotedCount / turnout.totalVoters) * 100).toFixed(1)}%
+                  {turnout.votedCount}
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {turnout.percentage}%
                 </td>
               </tr>
               <tr>
-                <td className="border border-black p-2 font-medium">Total Positions</td>
-                <td className="border border-black p-2 text-right" colSpan={2}>{election.positions.length}</td>
+                <td className="border border-black p-2 font-medium">
+                  Not Voted
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {turnout.notVotedCount}
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {(
+                    (turnout.notVotedCount / turnout.totalVoters) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 font-medium">
+                  Total Positions
+                </td>
+                <td className="border border-black p-2 text-right" colSpan={2}>
+                  {election.positions.length}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -413,160 +451,192 @@ const LiveResultsPage: React.FC = () => {
         <div className="screen-view">
           {/* Header */}
           <Card className="mb-8 relative overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-emerald-500 via-emerald-400 to-sky-400" />
-          <CardHeader className="pb-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                  <Trophy className="h-5 w-5" />
+            <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-emerald-500 via-emerald-400 to-sky-400" />
+            <CardHeader className="pb-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                    <Trophy className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl md:text-3xl">
+                      Election Results
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-sm">
+                      {election.title}
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-2xl md:text-3xl">
-                    Election Results
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-sm">
-                    {election.title}
-                  </CardDescription>
+                <div className="ml-auto flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                  <Badge
+                    variant={election.isOfficial ? "success" : "warning"}
+                    className="uppercase tracking-wide"
+                  >
+                    {election.isOfficial
+                      ? "Official results"
+                      : "Unofficial / partial"}
+                  </Badge>
+                  {!election.isOfficial && (
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      </span>
+                      <span className="font-medium">
+                        Live results (auto-refresh every minute)
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="ml-auto flex flex-wrap items-center gap-3 text-xs md:text-sm">
-                <Badge
-                  variant={election.isOfficial ? "success" : "warning"}
-                  className="uppercase tracking-wide"
-                >
-                  {election.isOfficial ? "Official results" : "Unofficial / partial"}
-                </Badge>
-                <div className="flex items-center gap-2 text-emerald-600">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                  </span>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div
+                className="text-sm leading-relaxed text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: election.description }}
+              />
+              {/* Statistics */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <span className="text-xs font-medium uppercase tracking-wide">
+                      Total voters
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold">{turnout.totalVoters}</p>
+                </div>
+                <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
+                  <div className="mb-2 flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-emerald-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">
+                      Voted
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {turnout.votedCount} ({turnout.percentage}%)
+                  </p>
+                  <Progress
+                    value={parseFloat(turnout.percentage) || 0}
+                    className="mt-3 h-2"
+                  />
+                </div>
+                <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
+                  <div className="mb-2 flex items-center gap-2">
+                    <UserX className="h-5 w-5 text-red-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">
+                      Not voted
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold">{turnout.notVotedCount}</p>
+                </div>
+                <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-emerald-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">
+                      Positions
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {election.positions.length}
+                  </p>
+                </div>
+              </div>
+              {lastUpdated && (
+                <p className="text-xs text-muted-foreground">
+                  Last updated:{" "}
                   <span className="font-medium">
-                    Live results (auto-refresh every minute)
+                    {lastUpdated.toLocaleTimeString()}
                   </span>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div
-              className="text-sm leading-relaxed text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: election.description }}
-            />
-            {/* Statistics */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
-                <div className="mb-2 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-xs font-medium uppercase tracking-wide">
-                    Total voters
-                  </span>
-                </div>
-                <p className="text-2xl font-bold">{turnout.totalVoters}</p>
-              </div>
-              <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
-                <div className="mb-2 flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-emerald-500" />
-                  <span className="text-xs font-medium uppercase tracking-wide">
-                    Voted
-                  </span>
-                </div>
-                <p className="text-2xl font-bold">
-                  {turnout.votedCount} ({turnout.percentage}%)
                 </p>
-                <Progress
-                  value={parseFloat(turnout.percentage) || 0}
-                  className="mt-3 h-2"
-                />
-              </div>
-              <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
-                <div className="mb-2 flex items-center gap-2">
-                  <UserX className="h-5 w-5 text-red-500" />
-                  <span className="text-xs font-medium uppercase tracking-wide">
-                    Not voted
-                  </span>
-                </div>
-                <p className="text-2xl font-bold">{turnout.notVotedCount}</p>
-              </div>
-              <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-800">
-                <div className="mb-2 flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-emerald-500" />
-                  <span className="text-xs font-medium uppercase tracking-wide">
-                    Positions
-                  </span>
-                </div>
-                <p className="text-2xl font-bold">{election.positions.length}</p>
-              </div>
-            </div>
-            {lastUpdated && (
-              <p className="text-xs text-muted-foreground">
-                Last updated:{" "}
-                <span className="font-medium">
-                  {lastUpdated.toLocaleTimeString()}
-                </span>
-              </p>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Print Position Results - Hidden on screen, shown in print */}
-        {positionResults.map(({ position, candidates, totalVotes }, posIndex) => {
-          return (
-            <div key={position.id} className={`print-position mb-6 hidden ${posIndex > 0 ? 'mt-8 pt-6 border-t-2 border-black' : ''}`}>
-              <h3 className="text-lg font-bold mb-3">
-                {position.title.toUpperCase()} - {position.winnerCount} Winner{position.winnerCount > 1 ? 's' : ''}
-              </h3>
-              <p className="text-sm mb-3">Total Votes: {totalVotes}</p>
-              {candidates.length === 0 ? (
-                <p className="py-4 text-center">No candidates for this position</p>
-              ) : (
-                <table className="w-full border-collapse border border-black mb-4">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-black p-2 text-left">Rank</th>
-                      <th className="border border-black p-2 text-left">Candidate Name</th>
-                      <th className="border border-black p-2 text-right">Votes</th>
-                      <th className="border border-black p-2 text-right">Percentage</th>
-                      <th className="border border-black p-2 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.map((candidate, index) => {
-                      const votePercentage =
-                        totalVotes > 0
-                          ? ((candidate.voteCount / totalVotes) * 100).toFixed(1)
-                          : "0.0";
-                      const isWinner = index < position.winnerCount;
-                      const nameToShow = candidate.user.name;
+        {positionResults.map(
+          ({ position, candidates, totalVotes }, posIndex) => {
+            return (
+              <div
+                key={position.id}
+                className={`print-position mb-6 hidden ${posIndex > 0 ? "mt-8 pt-6 border-t-2 border-black" : ""}`}
+              >
+                <h3 className="text-lg font-bold mb-3">
+                  {position.title.toUpperCase()} - {position.winnerCount} Winner
+                  {position.winnerCount > 1 ? "s" : ""}
+                </h3>
+                <p className="text-sm mb-3">Total Votes: {totalVotes}</p>
+                {candidates.length === 0 ? (
+                  <p className="py-4 text-center">
+                    No candidates for this position
+                  </p>
+                ) : (
+                  <table className="w-full border-collapse border border-black mb-4">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-black p-2 text-left">
+                          Rank
+                        </th>
+                        <th className="border border-black p-2 text-left">
+                          Candidate Name
+                        </th>
+                        <th className="border border-black p-2 text-right">
+                          Votes
+                        </th>
+                        <th className="border border-black p-2 text-right">
+                          Percentage
+                        </th>
+                        <th className="border border-black p-2 text-center">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {candidates.map((candidate, index) => {
+                        const votePercentage =
+                          totalVotes > 0
+                            ? (
+                                (candidate.voteCount / totalVotes) *
+                                100
+                              ).toFixed(1)
+                            : "0.0";
+                        const isWinner = index < position.winnerCount;
+                        const nameToShow = candidate.user.name;
 
-                      return (
-                        <tr key={candidate.id} className={isWinner ? 'bg-gray-50' : ''}>
-                          <td className="border border-black p-2 text-center font-medium">
-                            {index + 1}
-                          </td>
-                          <td className="border border-black p-2 font-medium">
-                            {nameToShow}
-                            {isWinner && <span className="ml-2 text-xs">(WINNER)</span>}
-                          </td>
-                          <td className="border border-black p-2 text-right">
-                            {candidate.voteCount}
-                          </td>
-                          <td className="border border-black p-2 text-right">
-                            {votePercentage}%
-                          </td>
-                          <td className="border border-black p-2 text-center">
-                            {isWinner ? "WINNER" : "-"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          );
-        })}
+                        return (
+                          <tr
+                            key={candidate.id}
+                            className={isWinner ? "bg-gray-50" : ""}
+                          >
+                            <td className="border border-black p-2 text-center font-medium">
+                              {index + 1}
+                            </td>
+                            <td className="border border-black p-2 font-medium">
+                              {nameToShow}
+                              {isWinner && (
+                                <span className="ml-2 text-xs">(WINNER)</span>
+                              )}
+                            </td>
+                            <td className="border border-black p-2 text-right">
+                              {candidate.voteCount}
+                            </td>
+                            <td className="border border-black p-2 text-right">
+                              {votePercentage}%
+                            </td>
+                            <td className="border border-black p-2 text-center">
+                              {isWinner ? "WINNER" : "-"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          }
+        )}
 
         {/* Screen View Position Results (Hidden in Print) */}
         <div className="screen-view">
@@ -604,7 +674,10 @@ const LiveResultsPage: React.FC = () => {
                       {candidates.map((candidate, index) => {
                         const votePercentage =
                           totalVotes > 0
-                            ? ((candidate.voteCount / totalVotes) * 100).toFixed(1)
+                            ? (
+                                (candidate.voteCount / totalVotes) *
+                                100
+                              ).toFixed(1)
                             : 0;
 
                         const displayName = election.isOfficial
@@ -648,17 +721,23 @@ const LiveResultsPage: React.FC = () => {
                                     {isWinner && (
                                       <Badge
                                         variant={
-                                          election.isOfficial ? "success" : "info"
+                                          election.isOfficial
+                                            ? "success"
+                                            : "info"
                                         }
                                       >
                                         <Trophy className="mr-1 h-3 w-3" />
-                                        {election.isOfficial ? "Winner" : "Leading"}
+                                        {election.isOfficial
+                                          ? "Winner"
+                                          : "Leading"}
                                       </Badge>
                                     )}
                                   </div>
                                   <p className="mt-1 text-xs text-muted-foreground">
                                     {candidate.voteCount} vote
-                                    {candidate.voteCount !== 1 ? "s" : ""} • {votePercentage}%
+                                    {candidate.voteCount !== 1
+                                      ? "s"
+                                      : ""} • {votePercentage}%
                                   </p>
                                 </div>
                               </div>
@@ -672,7 +751,9 @@ const LiveResultsPage: React.FC = () => {
                                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
                                   <div
                                     className={`h-full rounded-full ${
-                                      isWinner ? "bg-emerald-500" : "bg-red-500/80"
+                                      isWinner
+                                        ? "bg-emerald-500"
+                                        : "bg-red-500/80"
                                     }`}
                                     style={{ width: `${votePercentage}%` }}
                                   />

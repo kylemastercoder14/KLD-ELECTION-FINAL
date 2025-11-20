@@ -88,6 +88,17 @@ const Client = ({ election }: { election: ElectionWithRelations }) => {
     minutes: 0,
     seconds: 0,
   });
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Auto-refresh data every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh();
+      setLastUpdated(new Date());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, [router]);
 
   const getPositionVote = (positionId: string): PositionVote => {
     return votes[positionId] ?? { candidateIds: [], abstain: false };
@@ -351,7 +362,7 @@ const Client = ({ election }: { election: ElectionWithRelations }) => {
             className="text-muted-foreground text-sm mb-4"
             dangerouslySetInnerHTML={{ __html: election.description || "" }}
           />
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm flex-wrap">
             <div className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
               <span className="text-xs">
@@ -371,6 +382,20 @@ const Client = ({ election }: { election: ElectionWithRelations }) => {
               <span className="capitalize text-xs">
                 {isElectionEnded() ? "ENDED" : election.status}
               </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-emerald-600">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              </span>
+              <span className="font-medium">
+                Live • Updates every minute
+              </span>
+              {lastUpdated && (
+                <span className="text-[11px] text-muted-foreground">
+                  (Updated {lastUpdated.toLocaleTimeString()})
+                </span>
+              )}
             </div>
           </div>
         </div>

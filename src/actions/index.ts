@@ -10,7 +10,12 @@ import {
   PartylistValidators,
 } from "@/validators";
 import db from "@/lib/db";
-import { sendAccountToEmail } from "@/hooks/use-email-template";
+import {
+  OfficialResultsPosition,
+  OfficialResultsTurnout,
+  sendAccountToEmail,
+  sendOfficialResultsToEmail,
+} from "@/hooks/use-email-template";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateUniqueCode } from "@/lib/utils";
@@ -657,6 +662,170 @@ export const updateElection = async (
     }
     return {
       error: "Failed to update election. Please try again.",
+    };
+  }
+};
+
+export const markElectionAsOfficial = async (id: string) => {
+  const session = await getServerSession(authOptions);
+
+  try {
+    if (!session?.user?.id) {
+      return {
+        error: "You must be logged in to mark an election as official.",
+      };
+    }
+
+    // Check if user has permission (COMELEC or POLL_WATCHER)
+    const userRole = session.user.role;
+    if (userRole !== "COMELEC" && userRole !== "POLL_WATCHER") {
+      return {
+        error: "You do not have permission to mark elections as official.",
+      };
+    }
+
+    // Check if election exists with full details
+    const electionWithDetails = await db.election.findUnique({
+      where: { id },
+      include: {
+        positions: {
+          include: {
+            votes: true,
+            candidates: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                votes: true,
+              },
+            },
+          },
+        },
+        votes: true,
+      },
+    });
+
+    if (!electionWithDetails) {
+      return { error: "Election not found." };
+    }
+    const election = electionWithDetails;
+
+    // Update election to official
+    const response = await db.election.update({
+      where: { id },
+      data: {
+        isOfficial: true,
+        status: "COMPLETED", // Ensure status is COMPLETED
+      },
+    });
+
+    const electionData = election;
+
+    // Build position result summaries
+    const positionResults: OfficialResultsPosition[] =
+      electionData.positions.map((position) => {
+        const sortedCandidates = [...position.candidates].sort(
+          (a, b) => b.votes.length - a.votes.length
+        );
+
+        const winners = sortedCandidates
+          .slice(0, position.winnerCount)
+          .map((candidate) => ({
+            candidateName: candidate.user?.name || "Unknown Candidate",
+            voteCount: candidate.votes.length,
+            partyName: undefined,
+          }));
+
+        return {
+          positionTitle: position.title,
+          winners,
+          totalVotes: position.votes.length,
+        };
+      });
+
+    // Build voter filter
+    const voterFilter: any = { role: "USER" };
+    switch (election.voterRestriction) {
+      case "STUDENTS":
+        voterFilter.userType = "STUDENT";
+        break;
+      case "FACULTY":
+        voterFilter.userType = "FACULTY";
+        break;
+      case "NON_TEACHING":
+        voterFilter.userType = "NON_TEACHING";
+        break;
+      case "STUDENTS_FACULTY":
+        voterFilter.OR = [{ userType: "STUDENT" }, { userType: "FACULTY" }];
+        break;
+      case "ALL":
+      default:
+        break;
+    }
+
+    const voters = await db.user.findMany({
+      where: voterFilter,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    const votersWhoVoted = Array.from(
+      new Set(electionData.votes.map((vote) => vote.voterId))
+    );
+
+    const turnout: OfficialResultsTurnout = {
+      totalVoters: voters.length,
+      votedCount: votersWhoVoted.length,
+      percentage:
+        voters.length > 0
+          ? ((votersWhoVoted.length / voters.length) * 100).toFixed(1)
+          : "0.0",
+    };
+
+    const announcementDate = new Date().toLocaleString("en-PH", {
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+
+    // Send notifications to all eligible voters (fire and forget)
+    const emailPromises = voters.map((voter) =>
+      sendOfficialResultsToEmail(
+        voter.email,
+        voter.name || "KLD Voter",
+        election.title,
+        announcementDate,
+        positionResults,
+        turnout,
+        "Visit the EMS portal for the detailed canvassing report."
+      )
+    );
+    void Promise.allSettled(emailPromises);
+
+    await createSystemLog(
+      "Election Marked as Official",
+      session.user.id,
+      `Election marked as official: ${response.title} by ${userRole}`
+    );
+
+    revalidatePath("/poll-watcher/election");
+    revalidatePath("/comelec/election");
+    revalidatePath(`/poll-watcher/election/${id}/results`);
+    revalidatePath(`/comelec/election/${id}/results`);
+
+    return {
+      success: "Election marked as official successfully.",
+      data: response,
+    };
+  } catch (error) {
+    console.error("Mark election as official error:", error);
+    return {
+      error: "Failed to mark election as official. Please try again.",
     };
   }
 };

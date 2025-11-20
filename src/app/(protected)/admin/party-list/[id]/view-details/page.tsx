@@ -25,6 +25,15 @@ const Page = async (props: {
           },
         },
       },
+      head: {
+        include: {
+          candidate: {
+            include: {
+              position: true,
+            },
+          },
+        },
+      },
     },
   });
 

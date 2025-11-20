@@ -4,6 +4,9 @@ import db from "@/lib/db";
 import { columns } from "./_components/columns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 const Page = async () => {
   const parties = await db.party.findMany({
@@ -17,6 +20,15 @@ const Page = async () => {
                   position: true,
                 },
               },
+            },
+          },
+        },
+      },
+      head: {
+        include: {
+          candidate: {
+            include: {
+              position: true,
             },
           },
         },
@@ -35,6 +47,15 @@ const Page = async () => {
           title="Manage Party-list"
           description="Overview of all party-lists and applications for this system."
         />
+        <Button size="sm">
+          <Link
+            href="/superadmin/party-list/create"
+            className="flex items-center gap-2"
+          >
+            <Plus className="size-4" />
+            Create new party
+          </Link>
+        </Button>
       </div>
       <div className="mt-5">
         <Tabs defaultValue="active" className="gap-4">

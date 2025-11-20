@@ -30,9 +30,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCcw } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 const AccountForm = ({ initialData }: { initialData: User | null }) => {
   const router = useRouter();
+  const { data: session } = useSession();
+  const currentUserRole = session?.user?.role as UserRole | undefined;
+
+  // Filter roles based on current user's role
+  const availableRoles = React.useMemo(() => {
+    const allRoles = Object.values(UserRole);
+    // If current user is ADMIN, hide SUPERADMIN role
+    if (currentUserRole === "ADMIN") {
+      return allRoles.filter((role) => (role !== "SUPERADMIN" && role !== "ADMIN"));
+    }
+    return allRoles;
+  }, [currentUserRole]);
+
   const form = useForm<z.infer<typeof UserValidators>>({
     resolver: zodResolver(UserValidators),
     mode: "onChange",
@@ -160,33 +174,45 @@ const AccountForm = ({ initialData }: { initialData: User | null }) => {
           <FormField
             control={form.control}
             name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Role <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select
-                  {...field}
-                  disabled={isSubmitting}
-                  onValueChange={field.onChange}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                  </FormControl>
+            render={({ field }) => {
+              // Disable role field if ADMIN is editing a SUPERADMIN user
+              const isEditingSuperAdmin =
+                initialData?.role === "SUPERADMIN" && currentUserRole === "ADMIN";
+              const isDisabled = isSubmitting || isEditingSuperAdmin;
 
-                  <SelectContent>
-                    {Object.values(UserRole).map((item) => (
-                      <SelectItem key={`${item}`} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
+              return (
+                <FormItem>
+                  <FormLabel>
+                    Role <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    {...field}
+                    disabled={isDisabled}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                    </FormControl>
+
+                    <SelectContent>
+                      {availableRoles.map((item) => (
+                        <SelectItem key={`${item}`} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isEditingSuperAdmin && (
+                    <FormDescription className="text-amber-600 dark:text-amber-400">
+                      You cannot modify the role of a SUPERADMIN user.
+                    </FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           {form.watch("role") === "USER" && (
