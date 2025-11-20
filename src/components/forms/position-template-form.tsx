@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 "use client";
 
 import React from "react";
@@ -44,7 +45,7 @@ const PositionTemplateForm = ({
   initialData: PositionTemplateWithItems | null;
 }) => {
   const router = useRouter();
-  const form = useForm<z.infer<typeof PositionTemplateValidator>>({
+  const form = useForm<z.input<typeof PositionTemplateValidator>>({
     resolver: zodResolver(PositionTemplateValidator),
     mode: "onChange",
     defaultValues: {
@@ -66,7 +67,7 @@ const PositionTemplateForm = ({
     },
   });
 
-  const { fields, append, remove, move } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
   });
@@ -87,7 +88,7 @@ const PositionTemplateForm = ({
 
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: z.infer<typeof PositionTemplateValidator>) {
+  async function onSubmit(values: z.input<typeof PositionTemplateValidator>) {
     try {
       // Sort items by displayOrder before submitting
       const sortedItems = values.items.map((item, index) => ({
