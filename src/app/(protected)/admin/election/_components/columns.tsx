@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { useState } from "react";
 import CellAction from "./cell-action";
 import { Badge } from "@/components/ui/badge";
-import { getStatusVariant } from '@/lib/utils';
-import { ElectionWithProps } from '@/types/interface';
+import { getStatusVariant } from "@/lib/utils";
+import { ElectionWithProps } from "@/types/interface";
 
 export const columns: ColumnDef<ElectionWithProps>[] = [
   {
@@ -95,11 +95,17 @@ export const columns: ColumnDef<ElectionWithProps>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const start = new Date(row.original.campaignStartDate);
-      const end = new Date(row.original.campaignEndDate);
-      return (
-        <span className="ml-2.5">{`${start.toLocaleDateString()} - ${end.toLocaleDateString()}`}</span>
-      );
+      const start = row.original.campaignStartDate
+        ? new Date(row.original.campaignStartDate)
+        : null;
+      const end = row.original.campaignEndDate
+        ? new Date(row.original.campaignEndDate)
+        : null;
+
+      const startStr = start ? start.toLocaleDateString() : "N/A";
+      const endStr = end ? end.toLocaleDateString() : "N/A";
+
+      return <span className="ml-2.5">{`${startStr} - ${endStr}`}</span>;
     },
   },
   {
@@ -141,7 +147,9 @@ export const columns: ColumnDef<ElectionWithProps>[] = [
         NON_TEACHING: "Non-Teaching",
         STUDENTS_FACULTY: "Students & Faculty",
       };
-      return <span className="ml-2.5">{displayMap[restriction] || restriction}</span>;
+      return (
+        <span className="ml-2.5">{displayMap[restriction] || restriction}</span>
+      );
     },
   },
   {

@@ -95,11 +95,17 @@ export const columns: ColumnDef<ElectionWithProps>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const start = new Date(row.original.campaignStartDate);
-      const end = new Date(row.original.campaignEndDate);
-      return (
-        <span className="ml-2.5">{`${start.toLocaleDateString()} - ${end.toLocaleDateString()}`}</span>
-      );
+      const start = row.original.campaignStartDate
+        ? new Date(row.original.campaignStartDate)
+        : null;
+      const end = row.original.campaignEndDate
+        ? new Date(row.original.campaignEndDate)
+        : null;
+
+      const startStr = start ? start.toLocaleDateString() : "N/A";
+      const endStr = end ? end.toLocaleDateString() : "N/A";
+
+      return <span className="ml-2.5">{`${startStr} - ${endStr}`}</span>;
     },
   },
   {
