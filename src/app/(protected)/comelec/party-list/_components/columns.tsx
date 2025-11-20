@@ -93,6 +93,24 @@ export const columns: ColumnDef<PartyWithCandidates>[] = [
     },
   },
   {
+    accessorKey: "head",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Head/Manager
+          <ChevronsUpDown className="h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const head = row.original.head;
+      return <span className="ml-2.5">{head?.name || "No head/manager assigned"}</span>;
+    },
+  },
+  {
     accessorKey: "status",
     header: ({ column }) => {
       return (

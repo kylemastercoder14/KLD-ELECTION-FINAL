@@ -6,6 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ElectionStatus } from "@prisma/client";
 import { syncElectionStatusesToNow } from "@/lib/election-status";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 const Page = async () => {
   await syncElectionStatusesToNow();
@@ -17,7 +20,7 @@ const Page = async () => {
     include: {
       positions: true,
       createdByUser: true,
-      candidates: true
+      candidates: true,
     },
   });
 
@@ -30,6 +33,15 @@ const Page = async () => {
           title="Manage Elections"
           description="Overview of all elections. You can create, edit, delete and change the status of elections."
         />
+        <Button size="sm">
+          <Link
+            href="/superadmin/election/create"
+            className="flex items-center gap-2"
+          >
+            <Plus className="size-4" />
+            Create new election
+          </Link>
+        </Button>
       </div>
       <div className="mt-5">
         <Tabs defaultValue="active" className="gap-4">

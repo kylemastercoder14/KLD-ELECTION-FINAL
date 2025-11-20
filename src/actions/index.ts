@@ -11,36 +11,9 @@ import db from "@/lib/db";
 import { sendAccountToEmail } from "@/hooks/use-email-template";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { generateUniqueCode } from "@/lib/utils";
+import { combineDateAndTime } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
-
-export async function updateUserMeta(formData: {
-  year?: string | null;
-  course?: string | null;
-  section?: string | null;
-  institute?: string | null;
-  department?: string | null;
-  unit?: string | null;
-}) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  await db.user.update({
-    where: { id: session.user.id },
-    data: {
-      year: formData.year,
-      course: formData.course,
-      section: formData.section,
-      institute: formData.institute,
-      department: formData.department,
-      unit: formData.unit,
-    },
-  });
-
-  return { success: true };
-}
 
 async function createSystemLog(
   action: string,
@@ -433,22 +406,66 @@ export const createElection = async (
   values: z.infer<typeof ElectionValidators>
 ) => {
   const session = await getServerSession(authOptions);
-  const validatedData = ElectionValidators.parse(values);
 
   try {
     if (!session?.user?.id) {
       return { error: "You must be logged in to create an election." };
     }
 
+    const validatedData = ElectionValidators.parse(values);
+
+    // Combine dates with times
+    const campaignStartDateTime = validatedData.campaignStartDate
+      ? combineDateAndTime(
+          validatedData.campaignStartDate,
+          validatedData.campaignStartTime
+        )
+      : undefined;
+
+    const campaignEndDateTime = validatedData.campaignEndDate
+      ? combineDateAndTime(
+          validatedData.campaignEndDate,
+          validatedData.campaignEndTime
+        )
+      : undefined;
+
+    const electionStartDateTime = combineDateAndTime(
+      validatedData.electionStartDate,
+      validatedData.electionStartTime
+    );
+
+    const electionEndDateTime = combineDateAndTime(
+      validatedData.electionEndDate,
+      validatedData.electionEndTime
+    );
+
+    // Generate unique code if specialized
+    let uniqueCode: string | null = null;
+    if (validatedData.isSpecialized) {
+      // Ensure the code is unique
+      let isUnique = false;
+      while (!isUnique) {
+        uniqueCode = generateUniqueCode();
+        const existing = await db.election.findUnique({
+          where: { uniqueCode: uniqueCode ?? undefined },
+        });
+        if (!existing) {
+          isUnique = true;
+        }
+      }
+    }
+
     const response = await db.election.create({
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        campaignStartDate: validatedData.campaignStartDate,
-        campaignEndDate: validatedData.campaignEndDate,
-        electionStartDate: validatedData.electionStartDate,
-        electionEndDate: validatedData.electionEndDate,
+        campaignStartDate: campaignStartDateTime,
+        campaignEndDate: campaignEndDateTime,
+        electionStartDate: electionStartDateTime,
+        electionEndDate: electionEndDateTime,
         voterRestriction: validatedData.voterRestriction,
+        isSpecialized: validatedData.isSpecialized || false,
+        uniqueCode: uniqueCode,
         createdBy: session.user.id,
         positions: {
           create: validatedData.positions.map((position) => ({
@@ -465,14 +482,23 @@ export const createElection = async (
     await createSystemLog(
       "Election Created",
       session.user.id,
-      `Election created: ${validatedData.title}`
+      `Election created: ${validatedData.title}${uniqueCode ? ` (Code: ${uniqueCode})` : ""}`
     );
 
     revalidatePath("/comelec/election");
 
-    return { success: "Election created successfully.", data: response };
+    return {
+      success: "Election created successfully.",
+      data: response,
+      uniqueCode: uniqueCode,
+    };
   } catch (error) {
-    console.error(error);
+    console.error("Create election error:", error);
+    if (error instanceof z.ZodError) {
+      return {
+        error: "Validation failed. Please check your inputs.",
+      };
+    }
     return {
       error: "Failed to create election. Please try again.",
     };
@@ -484,12 +510,13 @@ export const updateElection = async (
   values: z.infer<typeof ElectionValidators>
 ) => {
   const session = await getServerSession(authOptions);
-  const validatedData = ElectionValidators.parse(values);
 
   try {
     if (!session?.user?.id) {
       return { error: "You must be logged in to update an election." };
     }
+
+    const validatedData = ElectionValidators.parse(values);
 
     // Check if election exists
     const existingElection = await db.election.findUnique({
@@ -498,6 +525,54 @@ export const updateElection = async (
 
     if (!existingElection) {
       return { error: "Election not found." };
+    }
+
+    // Combine dates with times
+    const campaignStartDateTime = validatedData.campaignStartDate
+      ? combineDateAndTime(
+          validatedData.campaignStartDate,
+          validatedData.campaignStartTime
+        )
+      : undefined;
+
+    const campaignEndDateTime = validatedData.campaignEndDate
+      ? combineDateAndTime(
+          validatedData.campaignEndDate,
+          validatedData.campaignEndTime
+        )
+      : undefined;
+
+    const electionStartDateTime = combineDateAndTime(
+      validatedData.electionStartDate,
+      validatedData.electionStartTime
+    );
+
+    const electionEndDateTime = combineDateAndTime(
+      validatedData.electionEndDate,
+      validatedData.electionEndTime
+    );
+
+    // Handle unique code for specialized elections
+    let uniqueCode: string | null = existingElection.uniqueCode;
+
+    if (validatedData.isSpecialized) {
+      // If specialized but doesn't have a code, generate one
+      if (!uniqueCode) {
+        let isUnique = false;
+        while (!isUnique) {
+          uniqueCode = generateUniqueCode();
+          const existing = await db.election.findUnique({
+            where: { uniqueCode },
+          });
+          if (!existing) {
+            isUnique = true;
+          }
+        }
+      }
+      // If already has code, keep it
+    } else {
+      // If not specialized, remove the code
+      uniqueCode = null;
     }
 
     // Delete existing positions and create new ones
@@ -510,11 +585,13 @@ export const updateElection = async (
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        campaignStartDate: validatedData.campaignStartDate,
-        campaignEndDate: validatedData.campaignEndDate,
-        electionStartDate: validatedData.electionStartDate,
-        electionEndDate: validatedData.electionEndDate,
+        campaignStartDate: campaignStartDateTime,
+        campaignEndDate: campaignEndDateTime,
+        electionStartDate: electionStartDateTime,
+        electionEndDate: electionEndDateTime,
         voterRestriction: validatedData.voterRestriction,
+        isSpecialized: validatedData.isSpecialized || false,
+        uniqueCode: uniqueCode,
         positions: {
           create: validatedData.positions.map((position) => ({
             title: position.title,
@@ -530,7 +607,7 @@ export const updateElection = async (
     await createSystemLog(
       "Election Updated",
       session.user.id,
-      `Election updated: ${response.title}`
+      `Election updated: ${response.title}${uniqueCode ? ` (Code: ${uniqueCode})` : ""}`
     );
 
     revalidatePath("/comelec/election");
@@ -538,9 +615,15 @@ export const updateElection = async (
     return {
       success: "Election updated successfully.",
       data: response,
+      uniqueCode: uniqueCode,
     };
   } catch (error) {
-    console.error(error);
+    console.error("Update election error:", error);
+    if (error instanceof z.ZodError) {
+      return {
+        error: "Validation failed. Please check your inputs.",
+      };
+    }
     return {
       error: "Failed to update election. Please try again.",
     };
@@ -571,8 +654,6 @@ export const deleteElection = async (id: string) => {
       `Election deleted: ${election.title}`
     );
 
-    revalidatePath("/comelec/election");
-
     return { success: "Election deleted successfully." };
   } catch (error) {
     console.error(error);
@@ -599,10 +680,18 @@ export const createPartyList = async (
         name: validatedData.name,
         description: validatedData.description,
         logoUrl: validatedData.logo,
+        headId: validatedData.headId || null,
+      },
+      include: {
+        head: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
-
-    revalidatePath("/comelec/party-list");
 
     return { success: "Party-list created successfully.", data: response };
   } catch (error) {
@@ -634,10 +723,18 @@ export const updatePartyList = async (
         name: validatedData.name,
         description: validatedData.description,
         logoUrl: validatedData.logo,
+        headId: validatedData.headId || null,
+      },
+      include: {
+        head: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
-
-    revalidatePath("/comelec/party-list");
 
     return { success: "Party-list updated successfully.", data: response };
   } catch (error) {
@@ -668,56 +765,12 @@ export const archivePartyList = async (id: string, isActive: boolean) => {
       `Party ${successText}: ${response.name}`
     );
 
-    revalidatePath("/comelec/party-list");
-
     return { success: `Party ${successText} successfully`, data: response };
   } catch (error) {
     console.error(error);
     return { error: "Failed to update party status. Please try again." };
   }
 };
-
-export async function applyPartyAction(partyId: string) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, message: "You must be logged in to apply." };
-    }
-
-    const userId = session.user.id;
-
-    // Check if already applied or a member
-    const existing = await db.partyApplication.findFirst({
-      where: { userId, partyId },
-    });
-
-    if (existing) {
-      return {
-        success: false,
-        message: "You have already applied or are a member of this party.",
-      };
-    }
-
-    // Create application
-    await db.partyApplication.create({
-      data: {
-        userId,
-        partyId,
-        status: "PENDING",
-      },
-    });
-
-    revalidatePath("/user/party-list");
-
-    return {
-      success: true,
-      message: "Application submitted! Please wait for COMELEC approval.",
-    };
-  } catch (error) {
-    console.error("Apply party error:", error);
-    return { success: false, message: "An unexpected error occurred." };
-  }
-}
 
 export async function updatePartyApplicationStatus(
   id: string,
@@ -744,24 +797,214 @@ export async function updatePartyApplicationStatus(
   }
 }
 
-export async function updateCandidateStatus(
-  id: string,
-  status: "APPROVED" | "REJECTED"
-) {
-  try {
-    await db.candidate.update({
-      where: { id },
-      data: { status },
-    });
+export const bulkCreateUsers = async (
+  fileBase64: string,
+  fileName: string
+) => {
+  const session = await getServerSession(authOptions);
 
-    revalidatePath("/comelec/party-list");
+  if (!session || session.user?.role !== "SUPERADMIN") {
+    return { error: "Unauthorized. Only superadmins can bulk create users." };
+  }
+
+  try {
+    // Validate file type by extension
+    const validExtensions = [".xlsx", ".xls"];
+    const fileExtension = fileName
+      .substring(fileName.lastIndexOf("."))
+      .toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+      return {
+        error: "Invalid file type. Please upload an Excel file (.xlsx or .xls).",
+      };
+    }
+
+    // Parse Excel file
+    const XLSX = await import("xlsx");
+    const buffer = Buffer.from(fileBase64, "base64");
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+
+    if (!data || data.length === 0) {
+      return { error: "Excel file is empty or invalid." };
+    }
+
+    // Expected columns
+    const expectedColumns = [
+      "email",
+      "userId",
+      "name",
+      "role",
+      "userType",
+      "status",
+      "year",
+      "course",
+      "section",
+      "institute",
+      "department",
+      "position",
+      "unit",
+    ];
+
+    // Validate columns exist
+    const firstRow = data[0] as Record<string, unknown>;
+    const missingColumns = expectedColumns.filter(
+      (col) => !(col in firstRow)
+    );
+    if (missingColumns.length > 0) {
+      return {
+        error: `Missing required columns: ${missingColumns.join(", ")}`,
+      };
+    }
+
+    const errors: Array<{ row: number; error: string }> = [];
+    const createdUsers: string[] = [];
+    const defaultPassword = "password123";
+
+    // Process each row
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i] as Record<string, unknown>;
+      const rowNumber = i + 2; // +2 because Excel rows start at 1 and we have a header
+
+      try {
+        // Extract and clean data
+        const email = String(row.email || "").trim();
+        const userId = String(row.userId || "").trim();
+        const name = String(row.name || "").trim();
+        const role = String(row.role || "USER").trim().toUpperCase();
+        const userType = String(row.userType || "STUDENT").trim().toUpperCase();
+        const status = String(row.status || "Approved").trim();
+
+        // Validate required fields
+        if (!email || !userId || !name) {
+          errors.push({
+            row: rowNumber,
+            error: "Missing required fields: email, userId, or name",
+          });
+          continue;
+        }
+
+        // Validate email format
+        if (!email.includes("@kld.edu.ph")) {
+          errors.push({
+            row: rowNumber,
+            error: `Invalid email format: ${email} (must be @kld.edu.ph)`,
+          });
+          continue;
+        }
+
+        // Validate role
+        const validRoles = ["SUPERADMIN", "ADMIN", "COMELEC", "POLL_WATCHER", "USER"];
+        if (!validRoles.includes(role)) {
+          errors.push({
+            row: rowNumber,
+            error: `Invalid role: ${role}`,
+          });
+          continue;
+        }
+
+        // Validate userType
+        const validUserTypes = ["STUDENT", "FACULTY", "NON_TEACHING"];
+        if (!validUserTypes.includes(userType)) {
+          errors.push({
+            row: rowNumber,
+            error: `Invalid userType: ${userType}`,
+          });
+          continue;
+        }
+
+        // Check for duplicates
+        const existingEmail = await db.user.findUnique({
+          where: { email },
+        });
+        if (existingEmail) {
+          errors.push({
+            row: rowNumber,
+            error: `Email already exists: ${email}`,
+          });
+          continue;
+        }
+
+        const existingUserId = await db.user.findUnique({
+          where: { userId },
+        });
+        if (existingUserId) {
+          errors.push({
+            row: rowNumber,
+            error: `User ID already exists: ${userId}`,
+          });
+          continue;
+        }
+
+        // Extract optional fields
+        const year = row.year ? String(row.year).trim() : null;
+        const course = row.course ? String(row.course).trim() : null;
+        const section = row.section ? String(row.section).trim() : null;
+        const institute = row.institute ? String(row.institute).trim() : null;
+        const department = row.department ? String(row.department).trim() : null;
+        const position = row.position ? String(row.position).trim() : null;
+        const unit = row.unit ? String(row.unit).trim() : null;
+
+        // Create user
+        const user = await db.user.create({
+          data: {
+            email,
+            userId,
+            name,
+            password: defaultPassword,
+            role: role as any,
+            userType: userType as any,
+            status,
+            isActive: true,
+            year: userType === "STUDENT" ? year : null,
+            course: userType === "STUDENT" ? course : null,
+            section: userType === "STUDENT" ? section : null,
+            institute: userType === "FACULTY" ? institute : null,
+            department: userType === "FACULTY" ? department : null,
+            position: userType === "FACULTY" ? position : null,
+            unit: userType === "NON_TEACHING" ? unit : null,
+          },
+        });
+
+        createdUsers.push(user.email);
+
+        // Send email notification (optional, can be async)
+        try {
+          await sendAccountToEmail(email, name, defaultPassword, userId);
+        } catch (emailError) {
+          console.error(`Failed to send email to ${email}:`, emailError);
+          // Don't fail the entire operation if email fails
+        }
+      } catch (error) {
+        errors.push({
+          row: rowNumber,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    // Create system log
+    await createSystemLog(
+      "Bulk Account Creation",
+      session?.user?.id,
+      `Created ${createdUsers.length} user(s) from Excel file. ${errors.length} error(s).`
+    );
 
     return {
-      success: true,
-      message: `Candidate ${status.toLowerCase()} successfully.`,
+      success: `Successfully created ${createdUsers.length} user(s).`,
+      createdCount: createdUsers.length,
+      errorCount: errors.length,
+      errors: errors.length > 0 ? errors : undefined,
     };
   } catch (error) {
-    console.error("Failed to update candidate status:", error);
-    return { success: false, message: "Failed to update candidate status." };
+    console.error("Bulk create error:", error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to process Excel file. Please check the format and try again.",
+    };
   }
-}
+};

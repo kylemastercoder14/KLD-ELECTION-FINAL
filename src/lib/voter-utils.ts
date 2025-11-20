@@ -1,6 +1,28 @@
 import { User, VoterRestriction } from "@prisma/client";
 
 /**
+ * Determines the user type based on their profile data
+ */
+export function getUserType(user: User): "student" | "faculty" | "non-teaching" | "unknown" {
+  // Check if user is a student (has year, course, or section)
+  if (user.year || user.course || user.section) {
+    return "student";
+  }
+
+  // Check if user is faculty (has institute or department)
+  if (user.institute || user.department) {
+    return "faculty";
+  }
+
+  // Check if user is non-teaching (has unit)
+  if (user.unit) {
+    return "non-teaching";
+  }
+
+  return "unknown";
+}
+
+/**
  * Checks if a user is eligible to vote in an election based on voter restrictions
  */
 export function canUserVote(
@@ -12,21 +34,22 @@ export function canUserVote(
     return true;
   }
 
-  const userType = user.userType;
+  const userType = getUserType(user);
 
   switch (voterRestriction) {
     case VoterRestriction.STUDENTS:
-      return userType === "STUDENT";
+      return userType === "student";
 
     case VoterRestriction.FACULTY:
-      return userType === "FACULTY";
+      return userType === "faculty";
 
     case VoterRestriction.NON_TEACHING:
-      return userType === "NON_TEACHING";
+      return userType === "non-teaching";
 
     case VoterRestriction.STUDENTS_FACULTY:
-      return userType === "STUDENT" || userType === "FACULTY";
+      return userType === "student" || userType === "faculty";
 
+    case VoterRestriction.ALL:
     default:
       return true;
   }
@@ -53,4 +76,5 @@ export function getVoterRestrictionDescription(
       return "Unknown";
   }
 }
+
 

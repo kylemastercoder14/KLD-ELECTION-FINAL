@@ -38,6 +38,7 @@ export interface PartyApplicationWithUser extends PartyApplication {
 
 export interface PartyWithCandidates extends Party {
   applications: PartyApplicationWithUser[];
+  head?: UserWithCandidate | null;
 }
 
 export interface CandidacyApplication extends Candidate {

@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { customAlphabet } from "nanoid";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -88,3 +89,31 @@ export function timeAgo(date: Date | string) {
 }
 
 export const getData = () => {};
+
+export const combineDateAndTime = (date: Date, time?: string): Date => {
+  // Create a new date object preserving the local date
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+
+  if (time) {
+    const [hours, minutes] = time.split(":");
+    // Create date in local timezone
+    return new Date(year, month, day, parseInt(hours), parseInt(minutes), 0, 0);
+  }
+
+  // If no time provided, use start of day in local timezone
+  return new Date(year, month, day, 0, 0, 0, 0);
+};
+
+// Generate unique code for specialized elections (8 characters: A-Z, 0-9)
+export const generateUniqueCode = customAlphabet(
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  8
+);
+
+export const getLocalTime = (date: Date) => {
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+};

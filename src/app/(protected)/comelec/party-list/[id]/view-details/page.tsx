@@ -25,8 +25,19 @@ const Page = async (props: {
           },
         },
       },
+      head: {
+        include: {
+          candidate: {
+            include: {
+              position: true,
+            },
+          },
+        },
+      },
     },
   });
+
+  console.log("HEAD DATA:", JSON.stringify(initialData?.head, null, 2));
 
   return (
     <div>

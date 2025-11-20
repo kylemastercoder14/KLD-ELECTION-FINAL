@@ -8,11 +8,41 @@ const Page = async (props: {
   }>;
 }) => {
   const params = await props.params;
-  const initialData = await db.party.findUnique({
-    where: {
-      id: params.id,
-    },
-  });
+  const isCreate = params.id === "create";
+
+  const [initialData, users] = await Promise.all([
+    isCreate
+      ? null
+      : db.party.findUnique({
+          where: {
+            id: params.id,
+          },
+          include: {
+            head: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        }),
+    db.user.findMany({
+      where: {
+        isActive: true,
+        role: "USER",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        userId: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+  ]);
 
   const title = initialData
     ? `Edit Party List: ${initialData.name}`
@@ -24,7 +54,7 @@ const Page = async (props: {
     <div>
       <Heading title={title} description={description} />
       <div className="mt-5">
-        <PartylistForm initialData={initialData} />
+        <PartylistForm initialData={initialData} users={users} />
       </div>
     </div>
   );

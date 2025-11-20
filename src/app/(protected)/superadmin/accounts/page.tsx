@@ -9,6 +9,7 @@ import { columns } from "./_components/columns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { UserRole } from "@prisma/client";
+import BulkUploadDialog from "./_components/bulk-upload-dialog";
 
 const Page = async () => {
   const data = await db.user.findMany({
@@ -23,15 +24,18 @@ const Page = async () => {
           title="Manage User Accounts"
           description="Overview of all users. You can create, edit and delete the users."
         />
-        <Button size="sm">
-          <Link
-            href="/superadmin/accounts/create"
-            className="flex items-center gap-2"
-          >
-            <Plus className="size-4" />
-            Create new account
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <BulkUploadDialog />
+          <Button size="sm">
+            <Link
+              href="/superadmin/accounts/create"
+              className="flex items-center gap-2"
+            >
+              <Plus className="size-4" />
+              Create new account
+            </Link>
+          </Button>
+        </div>
       </div>
       <div className="mt-5">
         <Tabs defaultValue="active" className="gap-4">

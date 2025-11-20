@@ -25,6 +25,15 @@ const Page = async () => {
           },
         },
       },
+      head: {
+        include: {
+          candidate: {
+            include: {
+              position: true,
+            },
+          },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });

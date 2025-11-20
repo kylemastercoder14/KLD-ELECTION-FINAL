@@ -65,11 +65,10 @@ model User {
   userId        String?   @unique // Student/Employee ID
   name          String
   role          UserRole  @default(USER)
-  userType      UserType  @default(NON_TEACHING)
+  userType      UserType  @default(STUDENT)
   emailVerified DateTime?
   status        String    @default("Pending")
   isActive      Boolean   @default(true)
-  partyId       String?
 
   /// Student Meta
   year    String? // 1, 2, 3, 4
@@ -89,14 +88,15 @@ model User {
   sessions      Session[]
   backupHistory BackupHistory[]
 
-  candidate        Candidate?
-  votes            Vote[]
-  createdElections Election[]  @relation("ElectionCreator")
-  logs             SystemLog[]
+  candidate         Candidate?
+  votes             Vote[]
+  createdElections  Election[]         @relation("ElectionCreator")
+  headedParties     Party[]            @relation("PartyHead")
   partyApplications PartyApplication[]
+  logs              SystemLog[]
 
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// OAuth accounts → NextAuth support
@@ -159,14 +159,16 @@ model Election {
   title       String
   description String
 
-  campaignStartDate DateTime
-  campaignEndDate   DateTime
+  campaignStartDate DateTime?
+  campaignEndDate   DateTime?
   electionStartDate DateTime
   electionEndDate   DateTime
 
-  status   ElectionStatus @default(UPCOMING)
-  isActive Boolean        @default(true)
-  isOfficial Boolean @default(false)
+  status        ElectionStatus @default(UPCOMING)
+  isActive      Boolean        @default(true)
+  isOfficial    Boolean        @default(false)
+  isSpecialized Boolean        @default(false)
+  uniqueCode    String?        @unique
 
   /// Who may vote: ALL, STUDENTS, FACULTY, NON_TEACHING, STUDENTS_FACULTY
   voterRestriction VoterRestriction @default(ALL)
@@ -237,7 +239,11 @@ model Party {
   logoUrl     String?
   isActive    Boolean @default(true)
 
-  applications PartyApplication[] // <- new relation
+  /// Head/Manager/President of the party list (optional)
+  headId String?
+  head   User?   @relation("PartyHead", fields: [headId], references: [id], onDelete: SetNull)
+
+  applications PartyApplication[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -294,11 +300,9 @@ model Vote {
   election  Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
   position  Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
 
-  /// UPDATED: Prevent voting for the same candidate twice in an election
-  /// This allows multiple votes per position (for positions with winnerCount > 1)
+  /// Prevent voting more than once per position per election
   @@unique([voterId, electionId, candidateId])
 
-  /// Optional: Add index for better query performance
   @@index([voterId, electionId])
   @@index([positionId, candidateId])
 }
