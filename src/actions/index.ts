@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import z from "zod";
@@ -14,6 +15,35 @@ import { authOptions } from "@/lib/auth";
 import { generateUniqueCode } from "@/lib/utils";
 import { combineDateAndTime } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
+
+export async function updateUserMeta(formData: {
+  year?: string | null;
+  course?: string | null;
+  section?: string | null;
+  institute?: string | null;
+  department?: string | null;
+  unit?: string | null;
+}) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  await db.user.update({
+    where: { id: session.user.id },
+    data: {
+      year: formData.year,
+      course: formData.course,
+      section: formData.section,
+      institute: formData.institute,
+      department: formData.department,
+      unit: formData.unit,
+    },
+  });
+
+  return { success: true };
+}
 
 async function createSystemLog(
   action: string,
@@ -797,10 +827,7 @@ export async function updatePartyApplicationStatus(
   }
 }
 
-export const bulkCreateUsers = async (
-  fileBase64: string,
-  fileName: string
-) => {
+export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "SUPERADMIN") {
@@ -815,7 +842,8 @@ export const bulkCreateUsers = async (
       .toLowerCase();
     if (!validExtensions.includes(fileExtension)) {
       return {
-        error: "Invalid file type. Please upload an Excel file (.xlsx or .xls).",
+        error:
+          "Invalid file type. Please upload an Excel file (.xlsx or .xls).",
       };
     }
 
@@ -850,9 +878,7 @@ export const bulkCreateUsers = async (
 
     // Validate columns exist
     const firstRow = data[0] as Record<string, unknown>;
-    const missingColumns = expectedColumns.filter(
-      (col) => !(col in firstRow)
-    );
+    const missingColumns = expectedColumns.filter((col) => !(col in firstRow));
     if (missingColumns.length > 0) {
       return {
         error: `Missing required columns: ${missingColumns.join(", ")}`,
@@ -873,8 +899,12 @@ export const bulkCreateUsers = async (
         const email = String(row.email || "").trim();
         const userId = String(row.userId || "").trim();
         const name = String(row.name || "").trim();
-        const role = String(row.role || "USER").trim().toUpperCase();
-        const userType = String(row.userType || "STUDENT").trim().toUpperCase();
+        const role = String(row.role || "USER")
+          .trim()
+          .toUpperCase();
+        const userType = String(row.userType || "STUDENT")
+          .trim()
+          .toUpperCase();
         const status = String(row.status || "Approved").trim();
 
         // Validate required fields
@@ -896,7 +926,13 @@ export const bulkCreateUsers = async (
         }
 
         // Validate role
-        const validRoles = ["SUPERADMIN", "ADMIN", "COMELEC", "POLL_WATCHER", "USER"];
+        const validRoles = [
+          "SUPERADMIN",
+          "ADMIN",
+          "COMELEC",
+          "POLL_WATCHER",
+          "USER",
+        ];
         if (!validRoles.includes(role)) {
           errors.push({
             row: rowNumber,
@@ -943,7 +979,9 @@ export const bulkCreateUsers = async (
         const course = row.course ? String(row.course).trim() : null;
         const section = row.section ? String(row.section).trim() : null;
         const institute = row.institute ? String(row.institute).trim() : null;
-        const department = row.department ? String(row.department).trim() : null;
+        const department = row.department
+          ? String(row.department).trim()
+          : null;
         const position = row.position ? String(row.position).trim() : null;
         const unit = row.unit ? String(row.unit).trim() : null;
 
