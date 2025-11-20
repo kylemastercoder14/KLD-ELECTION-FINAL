@@ -63,8 +63,8 @@ const Page = async (props: {
             <div>
               <div className="font-semibold mb-1">Campaign Period</div>
               <div>
-                {format(election.campaignStartDate, "PPP")} -{" "}
-                {format(election.campaignEndDate, "PPP")}
+                {format(election.campaignStartDate ?? new Date(), "PPP")} -{" "}
+                {format(election.campaignEndDate ?? new Date(), "PPP")}
               </div>
             </div>
             <div>
