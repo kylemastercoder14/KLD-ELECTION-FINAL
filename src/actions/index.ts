@@ -2,6 +2,7 @@
 "use server";
 
 import z from "zod";
+import * as XLSX from "xlsx";
 import {
   UserValidators,
   PositionTemplateValidator,
@@ -848,7 +849,7 @@ export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
     }
 
     // Parse Excel file
-    const XLSX = await import("xlsx");
+
     const buffer = Buffer.from(fileBase64, "base64");
     const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
