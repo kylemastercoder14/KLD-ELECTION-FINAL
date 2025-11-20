@@ -42,7 +42,10 @@ const Page = async (props: {
         <CardHeader>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold flex-1">{election.title}</h1>
-            <Badge variant={getStatusVariant(election.status)} className="capitalize text-base">
+            <Badge
+              variant={getStatusVariant(election.status)}
+              className="capitalize text-base"
+            >
               {election.status.toLowerCase()}
             </Badge>
           </div>
@@ -53,26 +56,37 @@ const Page = async (props: {
             <div>
               <div className="font-semibold mb-1">Campaign Period</div>
               <div>
-                {format(election.campaignStartDate, "PPP")} - {format(election.campaignEndDate, "PPP")}
+                {format(election.campaignStartDate ?? new Date(), "PPP")} -{" "}
+                {format(election.campaignEndDate ?? new Date(), "PPP")}
               </div>
             </div>
             <div>
               <div className="font-semibold mb-1">Election Period</div>
               <div>
-                {format(election.electionStartDate, "PPP")} - {format(election.electionEndDate, "PPP")}
+                {format(election.electionStartDate, "PPP")} -{" "}
+                {format(election.electionEndDate, "PPP")}
               </div>
             </div>
             <div>
               <div className="font-semibold mb-1">Voter Restriction</div>
-              <Badge variant="outline">{voterRestrictionLabels[election.voterRestriction]}</Badge>
+              <Badge variant="outline">
+                {voterRestrictionLabels[election.voterRestriction]}
+              </Badge>
             </div>
             <div>
               <div className="font-semibold mb-1">Created By</div>
               <span>{election.createdByUser?.name ?? "Unknown"} (COMELEC)</span>
             </div>
             <div>
-              <div className="font-semibold mb-1">Official Total Candidates</div>
-              <span>{election.candidates.filter((f) => f.status === "APPROVED").length}</span>
+              <div className="font-semibold mb-1">
+                Official Total Candidates
+              </div>
+              <span>
+                {
+                  election.candidates.filter((f) => f.status === "APPROVED")
+                    .length
+                }
+              </span>
             </div>
             <div>
               <div className="font-semibold mb-1">Total Votes</div>
@@ -84,7 +98,9 @@ const Page = async (props: {
             <div className="font-semibold text-lg mb-2">Positions</div>
             <PositionsTable election={election} />
             {election.positions.length === 0 && (
-              <p className="p-4 text-center text-muted-foreground">No positions defined.</p>
+              <p className="p-4 text-center text-muted-foreground">
+                No positions defined.
+              </p>
             )}
           </div>
         </CardContent>
