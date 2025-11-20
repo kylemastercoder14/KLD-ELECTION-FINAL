@@ -3,7 +3,9 @@ import { User, VoterRestriction } from "@prisma/client";
 /**
  * Determines the user type based on their profile data
  */
-export function getUserType(user: User): "student" | "faculty" | "non-teaching" | "unknown" {
+export function getUserType(
+  user: User
+): "student" | "faculty" | "non-teaching" | "unknown" {
   // Check if user is a student (has year, course, or section)
   if (user.year || user.course || user.section) {
     return "student";
@@ -49,7 +51,6 @@ export function canUserVote(
     case VoterRestriction.STUDENTS_FACULTY:
       return userType === "student" || userType === "faculty";
 
-    case VoterRestriction.ALL:
     default:
       return true;
   }
@@ -76,5 +77,3 @@ export function getVoterRestrictionDescription(
       return "Unknown";
   }
 }
-
-
