@@ -1,13 +1,12 @@
 import Heading from "@/components/heading";
 import db from "@/lib/db";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/get-session";
 import { PartyWithStatus } from "@/types/interface";
 import DataTableClient from "./_components/client";
 
 const Page = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const userId = session?.user?.id;
 
   const parties = await db.party.findMany({

@@ -16,8 +16,7 @@ import {
   sendAccountToEmail,
   sendOfficialResultsToEmail,
 } from "@/hooks/use-email-template";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/get-session";
 import { generateUniqueCode } from "@/lib/utils";
 import { combineDateAndTime } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
@@ -30,7 +29,7 @@ export async function updateUserMeta(formData: {
   department?: string | null;
   unit?: string | null;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
@@ -70,7 +69,7 @@ async function createSystemLog(
 }
 
 export const createAccount = async (values: z.infer<typeof UserValidators>) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const validatedData = UserValidators.parse(values);
 
   try {
@@ -123,7 +122,7 @@ export const updateAccount = async (
   id: string,
   values: z.infer<typeof UserValidators>
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   const validatedData = UserValidators.parse(values);
   try {
@@ -153,7 +152,7 @@ export const updateAccount = async (
 };
 
 export const archiveAccount = async (id: string, isActive: boolean) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) {
@@ -181,7 +180,7 @@ export const archiveAccount = async (id: string, isActive: boolean) => {
 };
 
 export const approveUser = async (id: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) return { error: "Invalid account ID." };
@@ -205,7 +204,7 @@ export const approveUser = async (id: string) => {
 };
 
 export const rejectUser = async (id: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) return { error: "Invalid account ID." };
@@ -232,7 +231,7 @@ export const rejectUser = async (id: string) => {
 export const createPositionTemplate = async (
   values: z.infer<typeof PositionTemplateValidator>
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const validatedData = PositionTemplateValidator.parse(values);
 
   try {
@@ -285,7 +284,7 @@ export const updatePositionTemplate = async (
   id: string,
   values: z.infer<typeof PositionTemplateValidator>
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const validatedData = PositionTemplateValidator.parse(values);
 
   try {
@@ -341,7 +340,7 @@ export const updatePositionTemplate = async (
 };
 
 export const deletePositionTemplate = async (id: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) return { error: "Invalid template ID." };
@@ -378,7 +377,7 @@ export const togglePositionTemplateStatus = async (
   id: string,
   isActive: boolean
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) return { error: "Invalid template ID." };
@@ -410,7 +409,7 @@ export const togglePositionTemplateStatus = async (
 
 // Election archive/restore
 export const archiveElection = async (id: string, isActive: boolean) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) {
@@ -441,7 +440,7 @@ export const archiveElection = async (id: string, isActive: boolean) => {
 export const createElection = async (
   values: z.infer<typeof ElectionValidators>
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!session?.user?.id) {
@@ -545,7 +544,7 @@ export const updateElection = async (
   id: string,
   values: z.infer<typeof ElectionValidators>
 ) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!session?.user?.id) {
@@ -667,7 +666,7 @@ export const updateElection = async (
 };
 
 export const markElectionAsOfficial = async (id: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!session?.user?.id) {
@@ -831,7 +830,7 @@ export const markElectionAsOfficial = async (id: string) => {
 };
 
 export const deleteElection = async (id: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) return { error: "Invalid election ID." };
@@ -945,7 +944,7 @@ export const updatePartyList = async (
 
 // Election archive/restore
 export const archivePartyList = async (id: string, isActive: boolean) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   try {
     if (!id) {
@@ -998,7 +997,7 @@ export async function updatePartyApplicationStatus(
 }
 
 export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session || session.user?.role !== "SUPERADMIN") {
     return { error: "Unauthorized. Only superadmins can bulk create users." };
@@ -1241,7 +1240,7 @@ export async function updateCandidateStatus(
 
 export async function applyPartyAction(partyId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return { success: false, message: "You must be logged in to apply." };
     }

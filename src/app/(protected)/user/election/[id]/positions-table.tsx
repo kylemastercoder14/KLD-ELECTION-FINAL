@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -32,7 +32,7 @@ interface Props {
 
 export default function PositionsTable({ election }: Props) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [platform, setPlatform] = useState("");

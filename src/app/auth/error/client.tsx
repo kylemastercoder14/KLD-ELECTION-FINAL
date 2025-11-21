@@ -38,6 +38,11 @@ const errorMessages = {
       "There was a problem processing your authentication. This might be due to a database connection issue.",
     canRetry: true,
   },
+  "Only_@kld.edu.ph_email_addresses_are_allowed.": {
+    title: "Email Domain Restriction",
+    message: "Only @kld.edu.ph email addresses are allowed.",
+    canRetry: true,
+  },
   Default: {
     title: "Authentication Error",
     message: "An unexpected error occurred during authentication.",
@@ -47,7 +52,33 @@ const errorMessages = {
 
 export default function AuthError() {
   const searchParams = useSearchParams();
-  const errorType = searchParams.get("error") as keyof typeof errorMessages;
+  const errorParam = searchParams.get("error");
+
+  // Decode the error parameter and normalize it
+  const decodedError = errorParam
+    ? decodeURIComponent(errorParam).replace(/_/g, " ")
+    : null;
+
+  // Try to match the error type, handling both encoded and decoded versions
+  let errorType: keyof typeof errorMessages = "Default";
+
+  if (errorParam) {
+    // First try exact match
+    if (errorParam in errorMessages) {
+      errorType = errorParam as keyof typeof errorMessages;
+    }
+    // Then try decoded version
+    else if (decodedError && decodedError in errorMessages) {
+      errorType = decodedError as keyof typeof errorMessages;
+    }
+    // Check if it contains the email restriction message
+    else if (
+      errorParam.includes("kld.edu.ph") ||
+      decodedError?.includes("kld.edu.ph")
+    ) {
+      errorType = "Only_@kld.edu.ph_email_addresses_are_allowed.";
+    }
+  }
 
   const errorInfo = errorMessages[errorType] || errorMessages.Default;
 
@@ -72,6 +103,17 @@ export default function AuthError() {
               <AlertDescription className="text-yellow-800">
                 <strong>Note:</strong> Make sure you're using your official KLD
                 Gmail account. Personal Gmail accounts are not allowed.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {errorType === "Only_@kld.edu.ph_email_addresses_are_allowed." && (
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>Email Restriction:</strong> Only users with @kld.edu.ph
+                email addresses can sign in. Please use your official KLD Gmail
+                account.
               </AlertDescription>
             </Alert>
           )}

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/immutability */
 "use client";
 
 import React from "react";
@@ -16,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Mail, AlertCircle, User, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 const Client = () => {
   const router = useRouter();
@@ -30,6 +32,16 @@ const Client = () => {
   });
 
   const urlError = searchParams.get("error");
+  const callbackFromQuery = searchParams.get("callbackUrl");
+  const sanitizedCallbackUrl =
+    callbackFromQuery &&
+    callbackFromQuery.startsWith("/") &&
+    !callbackFromQuery.startsWith("//")
+      ? callbackFromQuery
+      : null;
+  const encodedCallbackUrl = sanitizedCallbackUrl
+    ? encodeURIComponent(sanitizedCallbackUrl)
+    : null;
 
   React.useEffect(() => {
     if (urlError) {
@@ -61,13 +73,21 @@ const Client = () => {
     setError(null);
 
     try {
-      // ✅ Let NextAuth handle the redirect - it will use the redirect callback
-      await signIn("google", {
-        callbackUrl: "/auth/signin-redirect", // Go to redirect handler
+      const callbackUrl = sanitizedCallbackUrl
+        ? encodeURIComponent(sanitizedCallbackUrl)
+        : undefined;
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: callbackUrl
+          ? `/auth/signin-redirect?callbackUrl=${callbackUrl}`
+          : "/auth/signin-redirect",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Google sign in error:", error);
-      setError("An unexpected error occurred. Please try again.");
+      setError(
+        error?.message ||
+          "An unexpected error occurred. Please try again."
+      );
       setLoading(false);
     }
   };
@@ -84,22 +104,35 @@ const Client = () => {
     }
 
     try {
-      const result = await signIn("student-number", {
-        studentNumber: studentCredentials.studentNumber,
-        password: studentCredentials.password,
-        redirect: false, // Keep this false for credentials to show errors
+      // Authenticate with our custom student login endpoint
+      // This endpoint handles authentication and creates the Better Auth session
+      const response = await fetch("/api/auth/student-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: studentCredentials.studentNumber,
+          password: studentCredentials.password,
+        }),
       });
 
-      if (result?.error) {
-        setError(getErrorMessage(result.error));
-      } else if (result?.ok) {
-        // ✅ For student login, redirect to signin-redirect handler
-        router.push("/auth/signin-redirect");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Invalid student/employee number or password.");
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+
+      // Session is already created by the API endpoint
+      // Redirect to signin-redirect handler
+      router.push(
+        encodedCallbackUrl
+          ? `/auth/signin-redirect?callbackUrl=${encodedCallbackUrl}`
+          : "/auth/signin-redirect"
+      );
+    } catch (error: any) {
       console.error("sign in error:", error);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
+      setError(error?.message || "An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   };

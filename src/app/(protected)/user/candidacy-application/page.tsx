@@ -1,13 +1,12 @@
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
 import Heading from "@/components/heading";
 import { DataTable } from "@/components/data-table";
 import { columns } from "./_components/columns";
 
 const Page = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session?.user?.id) redirect("/auth/sign-in");
 
   const applications = await db.candidate.findMany({

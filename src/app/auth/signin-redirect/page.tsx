@@ -1,57 +1,129 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-"use client";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { ROLE_HOME_ROUTES, ROUTE_ROLE_GUARDS } from "@/constants/auth-routes";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default function SignInRedirect() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+const sanitizeCallbackPath = (path?: string | null) => {
+  if (!path) return undefined;
 
-  const roleRoutes: Record<string, string> = {
-    SUPERADMIN: "/superadmin/dashboard",
-    ADMIN: "/admin/dashboard",
-    COMELEC: "/comelec/dashboard",
-    POLL_WATCHER: "/poll-watcher/dashboard",
-    USER: "/user/dashboard",
-  };
+  let decoded = path;
 
-  useEffect(() => {
-    if (status === "loading") return;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return undefined;
+  }
 
-    if (status === "unauthenticated") {
-      router.push("/auth/sign-in");
-      return;
-    }
+  if (
+    !decoded.startsWith("/") ||
+    decoded.startsWith("//") ||
+    decoded.startsWith("/auth")
+  ) {
+    return undefined;
+  }
 
-    if (session?.user) {
-      const userStatus = session.user.status;
-      const userRole = session.user.role;
+  return decoded;
+};
 
-      // ✅ Pending users
-      if (userStatus === "Pending") {
-        router.push("/waiting-approval");
-        return;
-      }
-
-      // ✅ Dynamic role-based redirect
-      const redirectPath = roleRoutes[userRole] ?? "/user/dashboard";
-      router.push(redirectPath);
-    }
-  }, [session, status, router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background-image relative p-4">
-      <div className="absolute inset-0 -z-1 bg-custom-gradient"></div>
-      <Card className="w-full max-w-md relative z-10 text-center p-6">
-        <CardContent className="text-center flex flex-col items-center justify-center mx-auto">
-          <Loader2 className="size-6 animate-spin" />
-          <p className="mt-4 text-muted-foreground">Redirecting...</p>
-        </CardContent>
-      </Card>
-    </div>
+const canRoleAccessPath = (role: string, pathname: string) => {
+  const guard = ROUTE_ROLE_GUARDS.find(
+    ({ prefix }) =>
+      pathname === prefix ||
+      (prefix !== "/" && pathname.startsWith(`${prefix}/`))
   );
+
+  if (!guard) {
+    return true;
+  }
+
+  return guard.roles.includes(role);
+};
+
+export default async function SignInRedirect({ searchParams }: PageProps) {
+  // Await searchParams in Next.js 15
+  const params = await searchParams;
+  const headersList = await import("next/headers").then((h) => h.headers());
+
+  // Try to get session from Better Auth or database
+  let session;
+  let userId: string | null = null;
+
+  try {
+    session = await auth.api.getSession({
+      headers: headersList,
+    });
+    if (session?.user) {
+      userId = session.user.id;
+    }
+  } catch (error) {
+    console.error("Error getting session from Better Auth:", error);
+  }
+
+  // If getSession fails, try to get session directly from database using cookie
+  if (!session?.user || !userId) {
+    const cookies = headersList.get("cookie") || "";
+    const sessionTokenMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
+
+    if (sessionTokenMatch) {
+      const sessionToken = sessionTokenMatch[1];
+      const db = (await import("@/lib/db")).default;
+      const dbSession = await db.session.findUnique({
+        where: { token: sessionToken },
+        include: { user: true },
+      });
+
+      if (dbSession && dbSession.expiresAt > new Date()) {
+        session = {
+          user: {
+            id: dbSession.user.id,
+            email: dbSession.user.email || "",
+            name: dbSession.user.name || "",
+          },
+        };
+        userId = dbSession.user.id;
+      }
+    }
+  }
+
+  if (!session?.user || !userId) {
+    // Clear the invalid cookie and redirect to sign-in
+    redirect("/auth/sign-in");
+  }
+
+  // Fetch full user data from database to get status and role
+  const db = (await import("@/lib/db")).default;
+  const dbUser = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+    },
+  });
+
+  if (!dbUser) {
+    redirect("/auth/sign-in");
+  }
+
+  const normalizedStatus = dbUser.status?.toUpperCase();
+  if (normalizedStatus === "PENDING") {
+    redirect("/waiting-approval");
+  }
+
+  const callbackPath = sanitizeCallbackPath(
+    typeof params?.callbackUrl === "string"
+      ? params?.callbackUrl
+      : undefined
+  );
+
+  if (callbackPath && canRoleAccessPath(dbUser.role, callbackPath)) {
+    redirect(callbackPath);
+  }
+
+  const destination = ROLE_HOME_ROUTES[dbUser.role] ?? ROLE_HOME_ROUTES.USER;
+
+  redirect(destination);
 }

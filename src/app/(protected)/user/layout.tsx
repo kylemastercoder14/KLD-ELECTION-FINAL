@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -12,14 +12,14 @@ import { SiteHeader } from "@/components/site-header";
 import CompleteFormModal from "@/components/complete-form-modal";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!isPending && !session) {
       router.push("/auth/sign-in");
     }
-  }, [status, router]);
+  }, [isPending, session, router]);
 
   const shouldShowCompleteForm = useMemo(() => {
     if (!session?.user) return false;
@@ -42,7 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return false;
   }, [session]);
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className="flex h-screen">
         <div className="w-64 border-r bg-muted/40">

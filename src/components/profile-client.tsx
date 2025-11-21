@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { upload } from "@/lib/upload";
 import { timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 interface ProfileClientProps {
   profile: {
@@ -55,7 +55,7 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClient({ profile }: ProfileClientProps) {
-  const { update } = useSession();
+  const { data: session } = authClient.useSession();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
@@ -135,7 +135,7 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
 
       // Refresh the page to show new image
       router.refresh();
-      update();
+      // Session will auto-refresh with Better Auth
     } catch (error: any) {
       toast.error(error?.message || "Failed to upload image.");
     } finally {
@@ -159,7 +159,7 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
 
       // Refresh to show updated data
       router.refresh();
-      update();
+      // Session will auto-refresh with Better Auth
     } catch (error: any) {
       toast.error(error?.message || "Failed to update profile.");
     } finally {
@@ -205,7 +205,7 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
         newPassword: "",
         confirmPassword: "",
       });
-      update();
+      // Session will auto-refresh with Better Auth
     } catch (error: any) {
       toast.error(error?.message || "Failed to update password.");
     } finally {
@@ -807,14 +807,19 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
                         <tr key={session.id} className="border-b">
                           <td className="py-2 px-4">
                             <code className="text-xs">
-                              {session.sessionToken.substring(0, 20)}...
+                              {(session.token || session.sessionToken || "N/A").substring(0, 20)}
+                              {(session.token || session.sessionToken) && "..."}
                             </code>
                           </td>
                           <td className="py-2 px-4 text-sm">
                             {new Date(session.createdAt).toLocaleString()}
                           </td>
                           <td className="py-2 px-4 text-sm">
-                            {new Date(session.expires).toLocaleString()}
+                            {session.expiresAt
+                              ? new Date(session.expiresAt).toLocaleString()
+                              : session.expires
+                              ? new Date(session.expires).toLocaleString()
+                              : "N/A"}
                           </td>
                         </tr>
                       ))}

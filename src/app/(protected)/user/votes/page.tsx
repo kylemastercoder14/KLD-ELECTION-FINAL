@@ -1,7 +1,6 @@
 import Heading from "@/components/heading";
 import db from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
 import { columns } from "./_components/columns";
 import { DataTable } from "@/components/data-table";
@@ -17,7 +16,7 @@ type GroupedVote = {
 };
 
 const Page = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session?.user?.id) redirect("/auth/sign-in");
 
   const votes = await db.vote.findMany({

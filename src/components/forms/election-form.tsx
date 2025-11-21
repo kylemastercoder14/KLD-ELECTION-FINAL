@@ -229,12 +229,12 @@ const ElectionForm = ({
 
   return (
     <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="grid gap-3.5">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="grid gap-3.5">
             <FormField
-              control={form.control}
-              name="title"
+            control={form.control}
+            name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
@@ -243,7 +243,7 @@ const ElectionForm = ({
                   <FormControl>
                     <Input
                       disabled={isSubmitting}
-                      placeholder="Enter election title"
+            placeholder="Enter election title"
                       {...field}
                     />
                   </FormControl>
@@ -253,8 +253,8 @@ const ElectionForm = ({
             />
 
             <FormField
-              control={form.control}
-              name="description"
+            control={form.control}
+            name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
@@ -263,7 +263,7 @@ const ElectionForm = ({
                   <FormControl>
                     <Textarea
                       disabled={isSubmitting}
-                      placeholder="Enter election description"
+            placeholder="Enter election description"
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -275,9 +275,9 @@ const ElectionForm = ({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+          />
 
-            <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
+          <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
               <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
                 <div className="lg:col-span-3">
                   <FormField
@@ -517,7 +517,7 @@ const ElectionForm = ({
               <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
                 <div className="lg:col-span-3">
                   <FormField
-                    control={form.control}
+              control={form.control}
                     name="electionEndDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -567,7 +567,7 @@ const ElectionForm = ({
                 </div>
                 <div className="lg:col-span-2">
                   <FormField
-                    control={form.control}
+              control={form.control}
                     name="electionEndTime"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -586,8 +586,8 @@ const ElectionForm = ({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
-                </div>
+            />
+          </div>
               </div>
             </div>
 
@@ -632,7 +632,7 @@ const ElectionForm = ({
             />
 
             <FormField
-              control={form.control}
+            control={form.control}
               name="isSpecialized"
               render={({ field }) => (
                 <FormItem>
@@ -747,7 +747,7 @@ const ElectionForm = ({
                       {fields.map((field, index) => (
                         <TableRow key={field.id}>
                           <TableCell>
-                            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
                               <GripVertical className="size-4 text-muted-foreground" />
                               <span className="text-sm">{index + 1}</span>
                             </div>
@@ -815,22 +815,22 @@ const ElectionForm = ({
             </div>
 
             <div className="flex items-center gap-2 pt-4">
-              <Button
-                type="button"
-                onClick={() => router.back()}
-                variant="ghost"
-                className="w-fit"
+            <Button
+              type="button"
+              onClick={() => router.back()}
+              variant="ghost"
+              className="w-fit"
                 disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
+            >
+              Cancel
+            </Button>
               <Button type="submit" className="w-fit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
+            </Button>
           </div>
-        </form>
-      </Form>
+        </div>
+      </form>
+    </Form>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent>

@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2, Clock, LogOutIcon } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 
 const Page = () => {
@@ -36,7 +36,7 @@ const Page = () => {
             <Button
               variant="destructive"
               onClick={() => {
-                signOut();
+                authClient.signOut();
                 window.location.assign("/auth/sign-in");
               }}
               className="cursor-pointer"

@@ -1,6 +1,5 @@
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/get-session";
 import { canUserVote } from "@/lib/voter-utils";
 import { redirect } from "next/navigation";
 import Heading from "@/components/heading";
@@ -10,7 +9,7 @@ import { columns } from "./_components/columns";
 import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const Page = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session?.user?.id) redirect("/auth/sign-in");
 
   const today = new Date();

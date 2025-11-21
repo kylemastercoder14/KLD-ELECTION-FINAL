@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -56,7 +56,7 @@ type FacultyFormValues = z.infer<typeof facultySchema>;
 type NonTeachingFormValues = z.infer<typeof nonTeachingSchema>;
 
 export default function CompleteFormModal() {
-  const { data: session, update } = useSession();
+  const { data: session } = authClient.useSession();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -89,7 +89,7 @@ export default function CompleteFormModal() {
       const res = await updateUserMeta(values);
       if (res.success) {
         toast.success("Profile completed successfully!");
-        await update();
+        // Session will auto-refresh with Better Auth
         router.refresh();
       } else {
         toast.error("Failed to update profile.");

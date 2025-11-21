@@ -1,109 +1,80 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// middleware.ts
-import { withAuth } from "next-auth/middleware";
 import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { ROLE_HOME_ROUTES, ROUTE_ROLE_GUARDS } from "@/constants/auth-routes";
 
-// Get the NextAuth.js secret directly from environment variables
-const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+const AUTH_PUBLIC_PATHS = ["/auth/sign-in", "/auth/error", "/auth/signin-redirect", "/waiting-approval"];
+const PUBLIC_PREFIX_PATHS = ["/election"];
 
-// Define paths that are always public or NextAuth.js internal
-const PUBLIC_OR_AUTH_PATHS = [
-  "/auth",
-  "/api/auth/callback",
-  "/api/auth/session",
-  "/api/auth/csrf",
-  "/api/auth/providers",
-  "/",
-];
+const isAuthPublicPath = (pathname: string) =>
+  AUTH_PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+const isPublicPath = (pathname: string) => {
+  if (pathname === "/" || pathname === "") {
+    return true;
+  }
+
+  return PUBLIC_PREFIX_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+};
+
+const isStaticAsset = (pathname: string) =>
+  pathname.startsWith("/_next") ||
+  pathname.startsWith("/static") ||
+  pathname === "/favicon.ico";
 
 export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
+  const { pathname } = req.nextUrl;
 
-  // Log for debugging
-  console.log("Middleware - Path:", pathname);
-  console.log(
-    "Middleware - Is public/auth path:",
-    PUBLIC_OR_AUTH_PATHS.some((path) => pathname.startsWith(path))
-  );
-  console.log(
-    "Middleware - Has NextAuth Session Cookie:",
-    !!req.cookies.get("next-auth.session-token")
-  );
-
-  // Allow all public/auth paths without any token check
-  if (PUBLIC_OR_AUTH_PATHS.some((path) => pathname.startsWith(path))) {
-    // If it's the root path '/' and there's a session token, let withAuth handle redirect to /user
-    if (pathname === "/" && req.cookies.has("next-auth.session-token")) {
-      console.log(
-        "Middleware: Root path with session cookie. Delegating to withAuth to check token and redirect."
-      );
-      return (withAuth as any)(async (req: NextRequest) => {
-        // Cast to 'any' to satisfy type if needed
-        // Use withAuth's callback argument to get the token
-        return (withAuth as any)(
-          async ({ token, req }: { token: any; req: NextRequest }) => {
-            console.log(
-              "Middleware (internal withAuth for root): Token status:",
-              !!token
-            );
-            if (token) {
-              // If token is available here, redirect to /user
-              return NextResponse.redirect(new URL("/user", req.url));
-            }
-            return NextResponse.next();
-          }
-        )(req);
-      })(req);
-    }
-    console.log("Middleware: Allowing public/auth path.");
+  if (isStaticAsset(pathname) || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  // For all other protected paths, apply NextAuth's `withAuth` logic.
-  // This is where `req.nextauth.token` gets populated.
-  // We explicitly define `authorized` here.
-  return (withAuth as any)({
-    // Cast to 'any' to satisfy type if needed
-    callbacks: {
-      authorized: ({ token, req }: { token: any; req: NextRequest }) => {
-        const currentPath = req.nextUrl.pathname;
-        console.log("Authorized Callback (Core Logic): Path:", currentPath);
-        console.log("Authorized Callback (Core Logic): Token status:", !!token);
+  // Check for Better Auth session cookie (works in Edge Runtime)
+  // Better Auth stores session in cookies - check for any auth-related cookie
+  const hasAuthCookie = req.cookies.get("better-auth.session_token")?.value ||
+                        req.cookies.get("better-auth.session")?.value ||
+                        req.cookies.get("session")?.value;
+  const hasSession = !!hasAuthCookie;
 
-        // If a token is present, the user is authorized.
-        if (token) {
-          return true;
-        }
+  if (!hasSession) {
+    if (isAuthPublicPath(pathname) || isPublicPath(pathname)) {
+      return NextResponse.next();
+    }
 
-        // If no token, and it's not a public/auth path (already handled above),
-        // redirect to sign-in.
-        console.log(
-          "Authorized Callback (Core Logic): No token. Redirecting to sign-in."
-        );
-        return false; // Will trigger redirect to signIn page
-      },
-    },
-    pages: {
-      signIn: "/auth/sign-in",
-      error: "/auth/error",
-    },
-    secret: NEXTAUTH_SECRET, // Ensure secret is passed
-  })(req);
+    const signInUrl = new URL("/auth/sign-in", req.url);
+    const callbackUrl = req.nextUrl.pathname + req.nextUrl.search;
+    if (callbackUrl && callbackUrl !== "/") {
+      signInUrl.searchParams.set("callbackUrl", callbackUrl);
+    }
+    return NextResponse.redirect(signInUrl);
+  }
+
+  // For authenticated users, redirect from auth pages and root
+  // Role-based routing will happen in signin-redirect page (Node.js runtime)
+  // Don't redirect if already on signin-redirect or waiting-approval
+  if (isAuthPublicPath(pathname) && pathname !== "/auth/signin-redirect" && pathname !== "/waiting-approval") {
+    return NextResponse.redirect(new URL("/auth/signin-redirect", req.url));
+  }
+
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/auth/signin-redirect", req.url));
+  }
+
+  // Allow public paths
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // For protected paths, let them through
+  // Role-based access control happens in route handlers/layouts (Node.js runtime)
+  return NextResponse.next();
+
+  return NextResponse.next();
 }
 
 export const config = {
-  // IMPORTANT: The matcher must be broad enough to catch ALL paths that need protection,
-  // but also *avoid* catching the internal NextAuth.js API routes that need to run
-  // unhindered for authentication to complete.
-  // We'll exclude static files and API routes handled by NextAuth itself.
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (Next.js API routes, excluding NextAuth internal API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|assets).*)"],
 };

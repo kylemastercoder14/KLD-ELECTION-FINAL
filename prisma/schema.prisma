@@ -66,7 +66,7 @@ model User {
   name          String
   role          UserRole  @default(USER)
   userType      UserType  @default(STUDENT)
-  emailVerified DateTime?
+  emailVerified Boolean   @default(false)
   status        String    @default("Pending")
   isActive      Boolean   @default(true)
 
@@ -99,19 +99,24 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-/// OAuth accounts → NextAuth support
+/// OAuth accounts → Better Auth support
 model Account {
   id                String  @id @default(uuid())
   userId            String
-  type              String
-  provider          String
-  providerAccountId String
+  type              String? // Better Auth doesn't always provide this, make it optional
+  provider          String? // Better Auth uses providerId instead, make this optional
+  providerId        String  // Better Auth uses this field name (required)
+  accountId         String  // Better Auth uses this field name (required)
+  providerAccountId String? // NextAuth compatibility (optional, can be same as accountId)
   refresh_token     String? @db.Text
   access_token      String? @db.Text
+  accessToken       String? @db.Text // Better Auth uses camelCase
   expires_at        Int?
+  accessTokenExpiresAt DateTime? // Better Auth uses camelCase
   token_type        String?
   scope             String?
   id_token          String? @db.Text
+  idToken           String? @db.Text // Better Auth uses camelCase
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -119,23 +124,34 @@ model Account {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([provider, providerAccountId])
+  @@unique([providerId, accountId])
+  @@unique([provider, accountId]) // Keep for backward compatibility if provider is set
+  @@unique([provider, providerAccountId]) // Keep for backward compatibility
+  @@index([accountId])
+  @@index([providerId])
 }
 
-/// Used for login sessions
+/// Used for login sessions - Better Auth support
 model Session {
   id           String   @id @default(uuid())
-  sessionToken String   @unique
+  sessionToken String?  @unique // NextAuth compatibility (optional)
+  token        String   @unique // Better Auth uses this field name (required)
   userId       String
-  expires      DateTime
+  expires      DateTime? // NextAuth compatibility (optional)
+  expiresAt    DateTime  // Better Auth uses this field name (required)
+  ipAddress    String?
+  userAgent    String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([token])
+  @@index([sessionToken])
 }
 
-/// Email verification tokens
+/// Email verification tokens (NextAuth compatibility)
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -145,6 +161,20 @@ model VerificationToken {
   updatedAt DateTime @updatedAt
 
   @@unique([identifier, token])
+}
+
+/// Better Auth verification model
+model verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@index([identifier])
 }
 
 /**

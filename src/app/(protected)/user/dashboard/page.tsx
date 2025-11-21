@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -45,7 +45,7 @@ interface Election {
 }
 
 const Page = () => {
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullUser, setFullUser] = useState<User | null>(null);

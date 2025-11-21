@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import ProfileClient from "@/components/profile-client";
 
 const Page = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session?.user?.id) redirect("/auth/sign-in");
 
   const profile = await db.user.findUnique({

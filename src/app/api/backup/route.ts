@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "pg";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/get-session";
 import db from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
 
     if (!session || session.user?.role !== "SUPERADMIN") {
       return NextResponse.json(
@@ -67,9 +66,9 @@ export async function POST(req: NextRequest) {
 
       // Get all tables
       const tablesResult = await client.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
         AND table_type = 'BASE TABLE'
         ORDER BY table_name
       `);

@@ -22,7 +22,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 import Image from "next/image";
 import { toast } from "sonner";
 import { markElectionAsOfficial } from "@/actions";
@@ -85,7 +85,7 @@ const LiveResultsPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const electionId = params.id;
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const [election, setElection] = useState<Election | null>(null);
   const [turnout, setTurnout] = useState<TurnoutStats | null>(null);
   const [loading, setLoading] = useState(true);

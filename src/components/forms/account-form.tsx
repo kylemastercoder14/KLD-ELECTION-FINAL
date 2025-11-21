@@ -30,11 +30,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCcw } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 const AccountForm = ({ initialData }: { initialData: User | null }) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const currentUserRole = session?.user?.role as UserRole | undefined;
 
   // Filter roles based on current user's role
