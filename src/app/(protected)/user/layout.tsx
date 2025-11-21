@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import type React from "react";
@@ -15,6 +16,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
 
+  // Extract user from nested session structure
+  // Better Auth returns { session: { user: ... } } or { user: ... }
+  const sessionData = session as any;
+  const user = sessionData?.session?.user || sessionData?.user || null;
+
   useEffect(() => {
     if (!isPending && !session) {
       router.push("/auth/sign-in");
@@ -22,10 +28,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [isPending, session, router]);
 
   const shouldShowCompleteForm = useMemo(() => {
-    if (!session?.user) return false;
+    if (!user) return false;
 
     const { userType, year, course, section, institute, department, unit } =
-      session.user;
+      user as any;
 
     if (userType === "STUDENT") {
       return !year || !course || !section;
@@ -40,7 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
 
     return false;
-  }, [session]);
+  }, [user]);
 
   if (isPending) {
     return (
