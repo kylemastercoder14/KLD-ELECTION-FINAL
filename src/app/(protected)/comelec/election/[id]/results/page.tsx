@@ -86,6 +86,12 @@ const LiveResultsPage: React.FC = () => {
   const router = useRouter();
   const electionId = params.id;
   const { data: session } = authClient.useSession();
+
+  // Extract user from nested session structure
+  // Better Auth returns { session: { user: ... } } or { user: ... }
+  const sessionData = session as any;
+  const user = sessionData?.session?.user || sessionData?.user || null;
+
   const [election, setElection] = useState<Election | null>(null);
   const [turnout, setTurnout] = useState<TurnoutStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -284,8 +290,9 @@ const LiveResultsPage: React.FC = () => {
     return { position, candidates: sortedCandidates, totalVotes };
   });
 
+  const userRole = (user as any)?.role || null;
   const canMarkAsOfficial =
-    session?.user?.role === "COMELEC" || session?.user?.role === "POLL_WATCHER";
+    userRole === "COMELEC" || userRole === "POLL_WATCHER";
   const canMarkOfficial = canMarkAsOfficial && !election.isOfficial;
 
   return (
@@ -686,7 +693,7 @@ const LiveResultsPage: React.FC = () => {
 
                         const isWinner = index < position.winnerCount;
                         const nameToShow =
-                          session?.user.role === "POLL_WATCHER"
+                          userRole === "POLL_WATCHER"
                             ? candidate.user.name
                             : displayName;
 
@@ -702,7 +709,7 @@ const LiveResultsPage: React.FC = () => {
                             <div className="flex flex-col gap-4 md:flex-row md:items-center">
                               <div className="flex items-center gap-4">
                                 <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-sm font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100">
-                                  {session?.user.role === "POLL_WATCHER" ? (
+                                  {userRole === "POLL_WATCHER" ? (
                                     <Image
                                       src={candidate.imageUrl}
                                       alt={candidate.user.name}
