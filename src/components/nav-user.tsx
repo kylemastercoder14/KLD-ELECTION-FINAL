@@ -178,7 +178,19 @@ export function NavUser() {
                 Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => authClient.signOut()}>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  await authClient.signOut();
+                  // Redirect to sign-in page after successful sign out
+                  window.location.href = "/auth/sign-in";
+                } catch (error) {
+                  console.error("Error signing out:", error);
+                  // Even if there's an error, try to redirect
+                  window.location.href = "/auth/sign-in";
+                }
+              }}
+            >
               <IconLogout />
               Log out
             </DropdownMenuItem>
