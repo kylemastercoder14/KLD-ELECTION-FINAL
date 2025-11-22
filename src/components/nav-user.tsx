@@ -56,20 +56,39 @@ export function NavUser({ user }: { user: User }) {
   }
 
   const handleLogout = async () => {
-  try {
-    const { error } = await authClient.signOut();
+    try {
+      // Call custom sign-out API route
+      const response = await fetch("/api/auth/sign-out", {
+        method: "POST",
+        credentials: "include", // Important: include cookies
+      });
 
-    if (error) {
-      toast.error("Failed to log out. Please try again.");
-      return;
+      if (!response.ok) {
+        throw new Error("Failed to sign out");
+      }
+
+      // Clear client-side session data
+      try {
+        await authClient.signOut();
+      } catch (err) {
+        // Ignore errors from Better Auth client signOut
+        // We've already cleared the session server-side
+        console.log("Better Auth client signOut error (ignored):", err);
+      }
+
+      toast.success("Logged out successfully");
+
+      // Force a hard redirect to clear any client-side state
+      window.location.href = "/auth/sign-in";
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error(
+        err instanceof Error ? err.message : "An unexpected error occurred."
+      );
+      // Still try to redirect even if there's an error
+      window.location.href = "/auth/sign-in";
     }
-
-    toast.success("Logged out successfully");
-    router.push("/auth/sign-in");
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
-  }
-};
+  };
   return (
     <SidebarMenu>
       <SidebarMenuItem>
