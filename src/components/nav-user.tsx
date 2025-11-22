@@ -56,20 +56,20 @@ export function NavUser({ user }: { user: User }) {
   }
 
   const handleLogout = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          toast.success("Logged out successfully");
-          router.push("/auth/sign-in");
-        },
-        onError: (error) => {
-          toast.error(
-            error.error.message || "Failed to log out. Please try again."
-          );
-        },
-      },
-    });
-  };
+  try {
+    const { error } = await authClient.signOut();
+
+    if (error) {
+      toast.error("Failed to log out. Please try again.");
+      return;
+    }
+
+    toast.success("Logged out successfully");
+    router.push("/auth/sign-in");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
+  }
+};
   return (
     <SidebarMenu>
       <SidebarMenuItem>
