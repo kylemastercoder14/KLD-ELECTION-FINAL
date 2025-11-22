@@ -6,25 +6,29 @@ import db from "./db";
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
+
   cookies: {
     sessionToken: {
       name: "better-auth.session",
       options: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production", // must be true in prod (HTTPS)
         sameSite: "lax",
         path: "/",
         domain:
-          process.env.NODE_ENV === "production" ? "votenyo.com" : undefined,
+          process.env.NODE_ENV === "production" ? ".votenyo.com" : undefined, // allow subdomains
       },
     },
   },
+
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+
   emailAndPassword: {
-    enabled: false,
+    enabled: false, // we use username plugin instead
   },
+
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -32,16 +36,21 @@ export const auth = betterAuth({
       scope: ["email", "profile"],
     },
   },
+
   plugins: [username()],
-  trustedOrigins: ["http://localhost:3000", "https://votenyo.com"],
+
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://votenyo.com",
+    "https://www.votenyo.com",
+  ],
+
   user: {
     additionalFields: {
-      role: {
-        type: "string",
-        required: false,
-      },
+      role: { type: "string", required: false },
     },
   },
+
   databaseHooks: {
     user: {
       create: {
