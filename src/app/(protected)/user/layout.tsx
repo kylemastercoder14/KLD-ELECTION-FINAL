@@ -45,7 +45,7 @@ export default async function Layout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader user={user as User} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
           {shouldShowCompleteForm && <CompleteFormModal />}

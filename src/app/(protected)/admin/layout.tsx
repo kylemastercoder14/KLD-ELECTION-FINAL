@@ -1,18 +1,21 @@
-
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { getServerSession } from '@/lib/get-session';
-import { redirect } from 'next/navigation';
-import { User } from '@prisma/client';
+import { getServerSession } from "@/lib/get-session";
+import { redirect } from "next/navigation";
+import { User } from "@prisma/client";
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getServerSession();
-    if (!session?.user) {
-      redirect("/auth/sign-in");
-    }
+  if (!session?.user) {
+    redirect("/auth/sign-in");
+  }
 
-    const user = session.user;
+  const user = session.user;
 
   return (
     <SidebarProvider>
