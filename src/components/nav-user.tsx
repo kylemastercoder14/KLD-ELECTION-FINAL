@@ -56,13 +56,19 @@ export function NavUser({ user }: { user: User }) {
   }
 
   const handleLogout = async () => {
-    const { error } = await authClient.revokeSessions();
-    if (error) {
-      toast.error(error.message || "Failed to log out");
-    } else {
-      toast.success("Logged out successfully");
-      router.push("/auth/sign-in");
-    }
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          toast.success("Logged out successfully");
+          router.push("/auth/sign-in");
+        },
+        onError: (error) => {
+          toast.error(
+            error.error.message || "Failed to log out. Please try again."
+          );
+        },
+      },
+    });
   };
   return (
     <SidebarMenu>
@@ -125,9 +131,7 @@ export function NavUser({ user }: { user: User }) {
                 Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuItem
-              onClick={handleLogout}
-            >
+            <DropdownMenuItem onClick={handleLogout}>
               <IconLogout />
               Log out
             </DropdownMenuItem>
