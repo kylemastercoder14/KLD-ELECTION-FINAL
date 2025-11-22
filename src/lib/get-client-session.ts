@@ -1,5 +1,4 @@
 import { authClient } from "./auth-client";
-import { use } from "react";
 
 export function useClientSession() {
   const { data: session, isPending } = authClient.useSession();
@@ -10,8 +9,11 @@ export function useClientSession() {
 
   return {
     data: session,
-    status: isPending ? "loading" : session ? "authenticated" : "unauthenticated",
+    status: isPending
+      ? "loading"
+      : session
+        ? "authenticated"
+        : "unauthenticated",
     isPending,
   };
 }
-

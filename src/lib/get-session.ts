@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from "./auth";
 import db from "./db";
 import { headers } from "next/headers";
@@ -19,7 +20,6 @@ export async function getServerSession() {
         if (!(session.user as any).role) {
           const dbUser = await db.user.findUnique({
             where: { id: userId },
-            select: { role: true },
           });
           if (dbUser) {
             (session.user as any).role = dbUser.role;
@@ -33,7 +33,9 @@ export async function getServerSession() {
     // If getSession fails, try to get session directly from database using cookie
     if (!session?.user || !userId) {
       const cookies = headersList.get("cookie") || "";
-      const sessionTokenMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
+      const sessionTokenMatch = cookies.match(
+        /better-auth\.session_token=([^;]+)/
+      );
 
       if (sessionTokenMatch) {
         const sessionToken = sessionTokenMatch[1];
@@ -62,23 +64,6 @@ export async function getServerSession() {
     // Fetch full user data from database
     const dbUser = await db.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        userType: true,
-        status: true,
-        year: true,
-        course: true,
-        section: true,
-        institute: true,
-        department: true,
-        position: true,
-        unit: true,
-        userId: true,
-      },
     });
 
     if (!dbUser) {
@@ -109,4 +94,3 @@ export async function getServerSession() {
     return null;
   }
 }
-

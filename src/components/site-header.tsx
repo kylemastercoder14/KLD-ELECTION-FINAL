@@ -1,13 +1,12 @@
+"use client";
 
+import { useEffect, useState } from "react";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NavUser } from "./nav-user";
+import { User } from '@prisma/client';
 
-"use client"
-
-import { useEffect, useState } from "react"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { NavUser } from './nav-user'
-
-export function SiteHeader() {
+export function SiteHeader({ user }: { user: User }) {
   const [currentDateTime, setCurrentDateTime] = useState("");
 
   useEffect(() => {
@@ -15,8 +14,19 @@ export function SiteHeader() {
     const updateTime = () => {
       const now = new Date();
 
-      const formattedDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' });
-      const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+      const formattedDate = now.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        timeZone: "Asia/Manila",
+      });
+      const formattedTime = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Manila",
+      });
 
       const gmtOffset = "GMT+8 PH Time";
 
@@ -43,9 +53,9 @@ export function SiteHeader() {
           {currentDateTime}
         </h1>
         <div className="ml-auto flex items-center gap-2">
-          <NavUser />
+          <NavUser user={user} />
         </div>
       </div>
     </header>
-  )
+  );
 }

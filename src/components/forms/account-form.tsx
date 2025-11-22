@@ -30,26 +30,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCcw } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 
-const AccountForm = ({ initialData }: { initialData: User | null }) => {
+const AccountForm = ({
+  initialData,
+  currentUserRole,
+}: {
+  initialData: User | null;
+  currentUserRole: UserRole | undefined;
+}) => {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
 
-  // Extract user from nested session structure
-  // Better Auth returns { session: { user: ... } } or { user: ... }
-  const sessionData = session as any;
-  const user = sessionData?.session?.user || sessionData?.user || null;
-  const currentUserRole = (user as any)?.role as UserRole | undefined;
-
-  // Filter roles based on current user's role
   const availableRoles = React.useMemo(() => {
     const allRoles = Object.values(UserRole);
-    // If current user is ADMIN, hide SUPERADMIN role
-    if (currentUserRole === "ADMIN") {
-      return allRoles.filter((role) => (role !== "SUPERADMIN" && role !== "ADMIN"));
+
+    // SUPERADMIN can assign everything EXCEPT another SUPERADMIN
+    if (currentUserRole === "SUPERADMIN") {
+      return allRoles.filter((role) => role !== "SUPERADMIN");
     }
-    return allRoles;
+
+    // ADMIN can assign everything except SUPERADMIN
+    if (currentUserRole === "ADMIN") {
+      return allRoles.filter((role) => role !== "SUPERADMIN");
+    }
+
+    // Other roles cannot assign anything
+    return [];
   }, [currentUserRole]);
 
   const form = useForm<z.infer<typeof UserValidators>>({
@@ -182,7 +187,8 @@ const AccountForm = ({ initialData }: { initialData: User | null }) => {
             render={({ field }) => {
               // Disable role field if ADMIN is editing a SUPERADMIN user
               const isEditingSuperAdmin =
-                initialData?.role === "SUPERADMIN" && currentUserRole === "ADMIN";
+                initialData?.role === "SUPERADMIN" &&
+                currentUserRole === "ADMIN";
               const isDisabled = isSubmitting || isEditingSuperAdmin;
 
               return (

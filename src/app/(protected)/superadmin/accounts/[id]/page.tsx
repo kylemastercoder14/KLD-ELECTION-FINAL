@@ -1,13 +1,22 @@
-import React from "react";
+
 import db from "@/lib/db";
 import Heading from "@/components/heading";
 import AccountForm from "@/components/forms/account-form";
+import { getServerSession } from '@/lib/get-session';
+import { redirect } from 'next/navigation';
 
 const Page = async (props: {
   params: Promise<{
     id: string;
   }>;
 }) => {
+  const session = await getServerSession();
+  if (!session?.user) {
+    redirect("/auth/sign-in");
+  }
+
+  const user = session.user;
+
   const params = await props.params;
 
   const initialData = await db.user.findUnique({
@@ -26,7 +35,7 @@ const Page = async (props: {
     <div>
       <Heading title={title} description={description} />
       <div className="mt-5">
-        <AccountForm initialData={initialData} />
+        <AccountForm currentUserRole={user.role} initialData={initialData} />
       </div>
     </div>
   );

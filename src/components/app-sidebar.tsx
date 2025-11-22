@@ -1,8 +1,5 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { authClient } from "@/lib/auth-client";
 import {
   BarChart3,
   Vote,
@@ -37,7 +34,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 const menuItems = {
   SUPERADMIN: [
@@ -47,7 +43,11 @@ const menuItems = {
     { title: "Candidates", url: "/superadmin/candidates", icon: UserCheck },
     { title: "Accounts", url: "/superadmin/accounts", icon: UserCog },
     { title: "System Logs", url: "/superadmin/logs", icon: Shield },
-    { title: "Backup/Restore Database", url: "/superadmin/backup-database", icon: Database },
+    {
+      title: "Backup/Restore Database",
+      url: "/superadmin/backup-database",
+      icon: Database,
+    },
     { title: "Settings", url: "/superadmin/settings", icon: Settings },
   ],
   ADMIN: [
@@ -61,7 +61,11 @@ const menuItems = {
     { title: "Dashboard", url: "/comelec/dashboard", icon: BarChart3 },
     { title: "Elections", url: "/comelec/election", icon: Vote },
     { title: "Partylist", url: "/comelec/party-list", icon: Building },
-    { title: "Position Templates", url: "/comelec/position-templates", icon: LayoutPanelTop },
+    {
+      title: "Position Templates",
+      url: "/comelec/position-templates",
+      icon: LayoutPanelTop,
+    },
     { title: "Candidates", url: "/comelec/candidates", icon: UserCheck },
   ],
   POLL_WATCHER: [
@@ -72,94 +76,25 @@ const menuItems = {
   USER: [
     { title: "Dashboard", url: "/user/dashboard", icon: BarChart3 },
     { title: "Elections", url: "/user/election", icon: Vote },
-    { title: "Candidacy Application", url: "/user/candidacy-application", icon: UserPlus },
+    {
+      title: "Candidacy Application",
+      url: "/user/candidacy-application",
+      icon: UserPlus,
+    },
     { title: "My Votes", url: "/user/votes", icon: Trophy },
   ],
 };
 
-export function AppSidebar() {
-  const { data: session, isPending } = authClient.useSession();
+export function AppSidebar({ role }: { role?: string }) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  // Extract user from nested session structure
-  // Better Auth returns { session: { user: ... } } or { user: ... }
-  const sessionData = session as any;
-  const user = sessionData?.session?.user || sessionData?.user || null;
-
-  // Fetch user role from database if not in session
-  useEffect(() => {
-    if (user?.id) {
-      // Check if role exists in session (Better Auth might include it)
-      const sessionRole = (user as any).role;
-
-      if (sessionRole) {
-        setUserRole(sessionRole);
-      } else {
-        // Fetch role from API if not in session
-        fetch(`/api/users/${user.id}/role`)
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.role) {
-              setUserRole(data.role);
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching user role:", error);
-          });
-      }
-    }
-  }, [user]);
-
-  // Debug: Log session data
-  useEffect(() => {
-    console.log("AppSidebar - Session:", session);
-    console.log("AppSidebar - User:", user);
-    console.log("AppSidebar - IsPending:", isPending);
-    console.log("AppSidebar - UserRole:", userRole);
-  }, [session, user, isPending, userRole]);
-
-  // Show loading state while session is being fetched
-  if (isPending) {
-    return (
-      <Sidebar>
-        <SidebarHeader className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 relative">
-              <Image
-                src="/kld-logo.webp"
-                alt="KLD Logo"
-                fill
-                className="size-full"
-              />
-            </div>
-            <div>
-              <h2 className="font-semibold text-sm">KLD Election</h2>
-              <p className="text-xs text-muted-foreground">Management System</p>
-            </div>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <div className="p-4">
-            <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-          </div>
-        </SidebarContent>
-      </Sidebar>
-    );
-  }
-
-  if (!user) {
-    console.log("AppSidebar - No user, returning null");
-    return null;
-  }
 
   // Get role from session or fetched role, default to USER
   // This allows the sidebar to render immediately with USER menu while role is being fetched
-  const role = (user as any).role || userRole || "USER";
+  const userRole = role || "USER";
 
   const userMenuItems =
-    menuItems[role as keyof typeof menuItems] || menuItems.USER;
+    menuItems[userRole as keyof typeof menuItems] || menuItems.USER;
 
   // Function to handle the switch change
   const handleThemeChange = (checked: boolean) => {
@@ -198,7 +133,8 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={
-                      pathname === item.url || pathname.startsWith(`${item.url}/`)
+                      pathname === item.url ||
+                      pathname.startsWith(`${item.url}/`)
                     }
                   >
                     <Link href={item.url}>
