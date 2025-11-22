@@ -5,11 +5,25 @@ import { APIError } from "better-auth/api";
 import db from "./db";
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
+  cookies: {
+    sessionToken: {
+      name: "better-auth.session",
+      options: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        domain:
+          process.env.NODE_ENV === "production" ? "votenyo.com" : undefined,
+      },
+    },
+  },
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
   emailAndPassword: {
-    enabled: false, // We'll use username plugin instead
+    enabled: false,
   },
   socialProviders: {
     google: {
@@ -19,7 +33,7 @@ export const auth = betterAuth({
     },
   },
   plugins: [username()],
-  trustedOrigins: [process.env.BETTER_AUTH_URL || "http://localhost:3000"],
+  trustedOrigins: ["http://localhost:3000", "https://votenyo.com"],
   user: {
     additionalFields: {
       role: {
@@ -32,9 +46,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          // Check email domain before user creation
           const email = user.email?.toLowerCase() ?? "";
-
           if (!email.endsWith("@kld.edu.ph")) {
             throw new APIError("BAD_REQUEST", {
               message: "Only @kld.edu.ph email addresses are allowed.",
