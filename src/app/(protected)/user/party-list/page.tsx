@@ -1,18 +1,19 @@
 import Heading from "@/components/heading";
 import db from "@/lib/db";
 
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { PartyWithStatus } from "@/types/interface";
 import DataTableClient from "./_components/client";
 
 const Page = async () => {
   const session = await getServerSession();
-  const userId = session?.user?.id;
+  const userId = session?.id;
 
   const parties = await db.party.findMany({
+    where: { isActive: true },
     include: {
       applications: {
-        where: { userId },
+        where: { userId: userId },
         include: {
           user: {
             include: {

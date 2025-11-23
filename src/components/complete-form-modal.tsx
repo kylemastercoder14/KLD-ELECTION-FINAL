@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
-import * as React from "react";
-import { authClient } from "@/lib/auth-client";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { User } from '@prisma/client';
 
 const studentSchema = z.object({
   year: z.string().min(1, "Year is required"),
@@ -56,11 +55,25 @@ type FacultyFormValues = z.infer<typeof facultySchema>;
 type NonTeachingFormValues = z.infer<typeof nonTeachingSchema>;
 
 export default function CompleteFormModal() {
-  const { data: session } = authClient.useSession();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const user = session?.user as any;
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    fetchFullUser();
+  }, []);
+
+  const fetchFullUser = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      if (!response.ok) throw new Error("Failed to fetch user");
+      const data = await response.json();
+      setUser(data.user);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   // Determine form schema and default values based on user type
   const formSchema =

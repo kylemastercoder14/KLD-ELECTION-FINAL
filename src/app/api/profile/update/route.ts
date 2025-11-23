@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 
@@ -7,7 +7,7 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession();
 
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function PUT(req: Request) {
 
     // Get current user to check userType
     const currentUser = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: session.id },
       select: { userType: true },
     });
 
@@ -60,7 +60,7 @@ export async function PUT(req: Request) {
 
     // Update user
     const updatedUser = await db.user.update({
-      where: { id: session.user.id },
+      where: { id: session.id },
       data: updateData,
     });
 
@@ -69,7 +69,7 @@ export async function PUT(req: Request) {
       data: {
         action: "PROFILE_UPDATE",
         details: `User updated their profile information`,
-        userId: session.user.id,
+        userId: session.id,
       },
     });
 

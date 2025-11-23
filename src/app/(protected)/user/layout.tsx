@@ -1,30 +1,30 @@
 import type React from "react";
 
-import { redirect } from "next/navigation";
+import { redirect, unauthorized } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import CompleteFormModal from "@/components/complete-form-modal";
-import { getServerSession } from "@/lib/get-session";
-import { User } from "@prisma/client";
+import { getServerSession } from "@/lib/session";
 
 export default async function Layout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession();
-
-  // 2. If no user → redirect
-  if (!session?.user) {
+  const user = await getServerSession();
+  if (!user) {
     redirect("/auth/sign-in");
   }
 
-  const user = session.user;
+  // Optional: Verify user role if needed
+  if (user.role !== "USER") {
+    unauthorized();
+  }
 
   const shouldShowCompleteForm = (() => {
     const { userType, year, course, section, institute, department, unit } =
-      user as User;
+      user;
 
     if (userType === "STUDENT") {
       return !year || !course || !section;
@@ -45,7 +45,7 @@ export default async function Layout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SiteHeader user={user as User} />
+        <SiteHeader user={user} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
           {shouldShowCompleteForm && <CompleteFormModal />}

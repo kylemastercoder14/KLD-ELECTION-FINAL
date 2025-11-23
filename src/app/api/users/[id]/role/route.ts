@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 
 export async function GET(
   req: NextRequest,
@@ -9,14 +9,18 @@ export async function GET(
   try {
     const session = await getServerSession();
 
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
     // Only allow users to fetch their own role, or admins to fetch any role
-    if (session.user.id !== id && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+    if (
+      session.id !== id &&
+      session.role !== "SUPERADMIN" &&
+      session.role !== "ADMIN"
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -38,4 +42,3 @@ export async function GET(
     );
   }
 }
-

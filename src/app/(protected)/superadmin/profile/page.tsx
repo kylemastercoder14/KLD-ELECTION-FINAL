@@ -1,15 +1,15 @@
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import ProfileClient from "@/components/profile-client";
 
 const Page = async () => {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/auth/sign-in");
+  if (!session?.id) redirect("/auth/sign-in");
 
   const profile = await db.user.findUnique({
     where: {
-      id: session.user.id,
+      id: session.id,
     },
     include: {
       accounts: true,

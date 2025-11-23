@@ -2,7 +2,7 @@
 import db from "@/lib/db";
 import Heading from "@/components/heading";
 import AccountForm from "@/components/forms/account-form";
-import { getServerSession } from '@/lib/get-session';
+import { getServerSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
 const Page = async (props: {
@@ -11,11 +11,9 @@ const Page = async (props: {
   }>;
 }) => {
   const session = await getServerSession();
-  if (!session?.user) {
+  if (!session) {
     redirect("/auth/sign-in");
   }
-
-  const user = session.user;
 
   const params = await props.params;
 
@@ -35,7 +33,7 @@ const Page = async (props: {
     <div>
       <Heading title={title} description={description} />
       <div className="mt-5">
-        <AccountForm currentUserRole={user.role} initialData={initialData} />
+        <AccountForm currentUserRole={session.role} initialData={initialData} />
       </div>
     </div>
   );

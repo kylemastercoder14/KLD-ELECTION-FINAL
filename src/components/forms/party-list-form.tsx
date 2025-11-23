@@ -89,7 +89,7 @@ const PartylistForm = ({
       }
 
       toast.success(response.success);
-      router.push("/comelec/party-list");
+      router.push("/superadmin/party-list");
     } catch (error) {
       console.error("Form submission failed:", error);
       toast.error("Failed to save party list. Please try again.");

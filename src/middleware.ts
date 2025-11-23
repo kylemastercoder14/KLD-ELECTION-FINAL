@@ -1,80 +1,99 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { ROLE_HOME_ROUTES, ROUTE_ROLE_GUARDS } from "@/constants/auth-routes";
+import { ROLE_CONFIG } from "@/lib/config";
+import { jwtVerify } from "jose";
 
-const AUTH_PUBLIC_PATHS = ["/auth/sign-in", "/auth/error", "/auth/signin-redirect", "/waiting-approval"];
-const PUBLIC_PREFIX_PATHS = ["/election"];
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
-const isAuthPublicPath = (pathname: string) =>
-  AUTH_PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
+const PUBLIC_ROUTES = [
+  "/auth/sign-in",
+  "/auth/forgot-password",
+  "/waiting-approval",
+  "/election",
+];
+
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const isAuthRoute = ["/auth/sign-in", "/auth/forgot-password"].some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-const isPublicPath = (pathname: string) => {
-  if (pathname === "/" || pathname === "") {
-    return true;
+  // 👇 await the async function (since jose is async)
+  const user = await getUserFromToken(request);
+  type RoleKey = keyof typeof ROLE_CONFIG;
+
+  // If user is logged in and trying to access auth page, redirect to dashboard
+  if (user && isAuthRoute) {
+    if (user.role && user.role in ROLE_CONFIG) {
+      return NextResponse.redirect(
+        new URL(ROLE_CONFIG[user.role as RoleKey].dashboard, request.url)
+      );
+    }
+    const response = NextResponse.redirect(
+      new URL("/auth/sign-in", request.url)
+    );
+    response.cookies.delete("kld-election-auth-session");
+    return response;
   }
 
-  return PUBLIC_PREFIX_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  // Check if the route is public
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
-};
 
-const isStaticAsset = (pathname: string) =>
-  pathname.startsWith("/_next") ||
-  pathname.startsWith("/static") ||
-  pathname === "/favicon.ico";
-
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  if (isStaticAsset(pathname) || pathname.startsWith("/api/auth")) {
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Check for Better Auth session cookie (works in Edge Runtime)
-  // Better Auth stores session in cookies - check for any auth-related cookie
-  const hasAuthCookie = req.cookies.get("better-auth.session_token")?.value ||
-                        req.cookies.get("better-auth.session")?.value ||
-                        req.cookies.get("session")?.value;
-  const hasSession = !!hasAuthCookie;
-
-  if (!hasSession) {
-    if (isAuthPublicPath(pathname) || isPublicPath(pathname)) {
-      return NextResponse.next();
-    }
-
-    const signInUrl = new URL("/auth/sign-in", req.url);
-    const callbackUrl = req.nextUrl.pathname + req.nextUrl.search;
-    if (callbackUrl && callbackUrl !== "/") {
-      signInUrl.searchParams.set("callbackUrl", callbackUrl);
+  // If no user session and trying to access protected route, redirect to sign-in
+  if (!user) {
+    const signInUrl = new URL("/auth/sign-in", request.url);
+    if (!isAuthRoute) {
+      signInUrl.searchParams.set("redirect", pathname + search);
     }
     return NextResponse.redirect(signInUrl);
   }
 
-  // For authenticated users, redirect from auth pages and root
-  // Role-based routing will happen in signin-redirect page (Node.js runtime)
-  // Don't redirect if already on signin-redirect or waiting-approval
-  if (isAuthPublicPath(pathname) && pathname !== "/auth/signin-redirect" && pathname !== "/waiting-approval") {
-    return NextResponse.redirect(new URL("/auth/signin-redirect", req.url));
-  }
+  // Check if user has access
+  const hasAccess = pathname.startsWith(
+    ROLE_CONFIG[user.role as RoleKey].prefix
+  );
 
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/auth/signin-redirect", req.url));
+  if (!hasAccess) {
+    if (user.role in ROLE_CONFIG) {
+      return NextResponse.redirect(
+        new URL(ROLE_CONFIG[user.role as RoleKey].dashboard, request.url)
+      );
+    }
+    const response = NextResponse.redirect(
+      new URL("/auth/sign-in", request.url)
+    );
+    response.cookies.delete("kld-election-auth-session");
+    return response;
   }
-
-  // Allow public paths
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
-  // For protected paths, let them through
-  // Role-based access control happens in route handlers/layouts (Node.js runtime)
-  return NextResponse.next();
 
   return NextResponse.next();
 }
 
+// ✅ jose-compatible JWT decoder
+async function getUserFromToken(request: NextRequest) {
+  const token = request.cookies.get("kld-election-auth-session")?.value;
+  if (!token) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return {
+      id: payload.id as string,
+      role: payload.role as string,
+      userType: payload.userType as string,
+    };
+  } catch (err) {
+    console.error("JWT verification failed:", err);
+    return null;
+  }
+}
+
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|assets).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|woff2?|ttf|eot|otf)).*)",
+  ],
 };

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "pg";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import db from "@/lib/db";
 
 export async function POST(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // Check authentication and authorization
     const session = await getServerSession();
 
-    if (!session || session.user?.role !== "SUPERADMIN") {
+    if (!session || session?.role !== "SUPERADMIN") {
       return NextResponse.json(
         { error: "Unauthorized. Only superadmins can backup the database." },
         { status: 403 }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         action: "DB_BACKUP",
         filename,
         status: "IN_PROGRESS",
-        triggeredBy: session.user.id,
+        triggeredBy: session.id,
       },
     });
 
@@ -80,13 +80,16 @@ export async function POST(req: NextRequest) {
         sqlDump += `\n-- Table: ${tableName}\n`;
 
         // Get table schema
-        const schemaResult = await client.query(`
+        const schemaResult = await client.query(
+          `
           SELECT column_name, data_type, character_maximum_length,
                  column_default, is_nullable
           FROM information_schema.columns
           WHERE table_name = $1 AND table_schema = 'public'
           ORDER BY ordinal_position
-        `, [tableName]);
+        `,
+          [tableName]
+        );
 
         // Get table data
         const dataResult = await client.query(`SELECT * FROM "${tableName}"`);

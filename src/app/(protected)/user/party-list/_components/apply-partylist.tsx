@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { applyPartyAction } from "@/actions";
+import { applyPartyAction, removePartyApplication } from "@/actions";
 import { PartyWithStatus } from "@/types/interface";
 
 interface Props {
@@ -36,8 +36,47 @@ export default function ApplyPartyList({ party, userHasApplied }: Props) {
     });
   };
 
-  // Disable if the user already applied to any party OR if this party is currently applying
-  const isDisabled = isPending || party.hasApplied || userHasApplied;
+  const handleRemove = () => {
+    startTransition(async () => {
+      const result = await removePartyApplication(party.id);
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    });
+  };
+
+  // If user has applied to this specific party, show remove button
+  if (party.hasApplied) {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" size="sm" disabled={isPending}>
+            {isPending ? "Removing..." : "Resign"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resign from {party.name}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove your application from the <strong>{party.name}</strong> party-list?
+              This action cannot be undone, but you can apply to another party after removing this application.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemove} disabled={isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isPending ? "Removing..." : "Confirm Resignation"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  // Disable if the user already applied to any other party
+  const isDisabled = isPending || userHasApplied;
 
   return (
     <AlertDialog>
@@ -52,7 +91,7 @@ export default function ApplyPartyList({ party, userHasApplied }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Apply to {party.name}</AlertDialogTitle>
             <AlertDialogDescription>
-              By confirming, you’re applying to join the <strong>{party.name}</strong> party-list.
+              By confirming, you're applying to join the <strong>{party.name}</strong> party-list.
               Your application will be reviewed and approved by COMELEC before becoming official.
             </AlertDialogDescription>
           </AlertDialogHeader>

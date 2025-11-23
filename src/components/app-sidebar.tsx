@@ -76,6 +76,7 @@ const menuItems = {
   USER: [
     { title: "Dashboard", url: "/user/dashboard", icon: BarChart3 },
     { title: "Elections", url: "/user/election", icon: Vote },
+    { title: "Partylist", url: "/user/party-list", icon: Building },
     {
       title: "Candidacy Application",
       url: "/user/candidacy-application",

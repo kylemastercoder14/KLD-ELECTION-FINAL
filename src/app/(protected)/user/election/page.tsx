@@ -1,5 +1,5 @@
 import db from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { canUserVote } from "@/lib/voter-utils";
 import { redirect } from "next/navigation";
 import Heading from "@/components/heading";
@@ -10,7 +10,7 @@ import { syncElectionStatusesToNow } from "@/lib/election-status";
 
 const Page = async () => {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/auth/sign-in");
+  if (!session?.id) redirect("/auth/sign-in");
 
   const today = new Date();
 
@@ -51,7 +51,7 @@ const Page = async () => {
   });
 
   const availableElections = elections.filter((election) =>
-    canUserVote(session.user as User, election.voterRestriction)
+    canUserVote(session as User, election.voterRestriction)
   );
   return (
     <div>

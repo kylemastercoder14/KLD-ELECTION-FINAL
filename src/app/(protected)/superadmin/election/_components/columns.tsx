@@ -102,8 +102,8 @@ export const columns: ColumnDef<ElectionWithProps>[] = [
         ? new Date(row.original.campaignEndDate)
         : null;
 
-      const startStr = start ? start.toLocaleDateString() : "N/A";
-      const endStr = end ? end.toLocaleDateString() : "N/A";
+      const startStr = start ? start.toLocaleDateString() : "-";
+      const endStr = end ? end.toLocaleDateString() : "-";
 
       return <span className="ml-2.5">{`${startStr} - ${endStr}`}</span>;
     },

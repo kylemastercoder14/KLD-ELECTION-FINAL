@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import db from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const session = await getServerSession();
 
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session || session.role !== "SUPERADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

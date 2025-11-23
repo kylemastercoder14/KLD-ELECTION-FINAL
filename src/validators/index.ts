@@ -1,6 +1,12 @@
 import { UserRole, UserType, VoterRestriction } from "@prisma/client";
 import z from "zod";
 
+export const LoginValidators = z.object({
+  userId: z.string().min(1, "Student/employee number is required"),
+  password: z.string().min(1, "Password is required"),
+  remember: z.boolean().optional(),
+});
+
 export const ElectionPositionValidator = z.object({
   title: z.string().min(1, { message: "Position title is required." }),
   winnerCount: z

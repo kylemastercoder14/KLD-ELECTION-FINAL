@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession();
-  if (!session?.user?.id)
+  if (!session?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   // Check if user already applied in this election
   const existingCandidate = await db.candidate.findFirst({
-    where: { electionId, userId: session.user.id },
+    where: { electionId, userId: session.id },
   });
   if (existingCandidate) {
     return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   // Create candidate
   const candidate = await db.candidate.create({
     data: {
-      userId: session.user.id,
+      userId: session.id,
       electionId,
       positionId,
       platform,

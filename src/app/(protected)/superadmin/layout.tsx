@@ -1,24 +1,26 @@
 
-import { redirect } from "next/navigation";
+import { redirect, unauthorized } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { getServerSession } from '@/lib/get-session';
-import { User } from '@prisma/client';
+import { getServerSession } from '@/lib/session';
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession();
-  if (!session?.user) {
+  const user = await getServerSession();
+  if (!user) {
     redirect("/auth/sign-in");
   }
 
-  const user = session.user;
+  // Optional: Verify user role if needed
+  if (user.role !== "SUPERADMIN") {
+    unauthorized();
+  }
 
   return (
     <SidebarProvider>
       <AppSidebar role={user.role} />
       <SidebarInset>
-        <SiteHeader user={user as User} />
+        <SiteHeader user={user} />
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </SidebarInset>
     </SidebarProvider>

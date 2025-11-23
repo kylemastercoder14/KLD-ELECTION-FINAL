@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { authClient } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -45,14 +44,13 @@ interface Election {
 }
 
 const Page = () => {
-  const { data: session } = authClient.useSession();
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullUser, setFullUser] = useState<User | null>(null);
 
   useEffect(() => {
     fetchFullUser();
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     if (fullUser) fetchElections();
@@ -60,10 +58,10 @@ const Page = () => {
 
   const fetchFullUser = async () => {
     try {
-      const response = await fetch("/api/me");
+      const response = await fetch("/api/auth/session");
       if (!response.ok) throw new Error("Failed to fetch user");
       const data = await response.json();
-      setFullUser(data);
+      setFullUser(data.user);
     } catch (error) {
       console.error(error);
     }

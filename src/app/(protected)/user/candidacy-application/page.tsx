@@ -1,5 +1,5 @@
 import db from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import Heading from "@/components/heading";
 import { DataTable } from "@/components/data-table";
@@ -7,10 +7,10 @@ import { columns } from "./_components/columns";
 
 const Page = async () => {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/auth/sign-in");
+  if (!session?.id) redirect("/auth/sign-in");
 
   const applications = await db.candidate.findMany({
-    where: { userId: session.user.id },
+    where: { userId: session.id },
     include: {
       election: true,
       position: true,

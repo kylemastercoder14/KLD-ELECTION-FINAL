@@ -28,7 +28,6 @@ import { toast } from "sonner";
 import { upload } from "@/lib/upload";
 import { timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
 
 interface ProfileClientProps {
   profile: {
@@ -55,7 +54,6 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClient({ profile }: ProfileClientProps) {
-  const { data: session } = authClient.useSession();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("general");

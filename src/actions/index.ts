@@ -8,6 +8,7 @@ import {
   PositionTemplateValidator,
   ElectionValidators,
   PartylistValidators,
+  LoginValidators,
 } from "@/validators";
 import db from "@/lib/db";
 import {
@@ -16,10 +17,142 @@ import {
   sendAccountToEmail,
   sendOfficialResultsToEmail,
 } from "@/hooks/use-email-template";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { generateUniqueCode } from "@/lib/utils";
 import { combineDateAndTime } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
+import { UserType } from "@prisma/client";
+import { FormState } from "@/lib/utils";
+import { ROLE_CONFIG, UserRole } from "@/lib/config";
+
+const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+
+export async function setAuthCookie(
+  user: { id: string; role: UserRole; userType?: UserType | null },
+  remember: boolean
+) {
+  const token = jwt.sign(
+    { id: user.id, role: user.role, userType: user.userType },
+    JWT_SECRET,
+    {
+      expiresIn: remember ? "30d" : "1d",
+    }
+  );
+
+  (await cookies()).set("kld-election-auth-session", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: remember ? 30 * 24 * 60 * 60 : 24 * 60 * 60,
+  });
+}
+
+export async function loginAction(
+  prevState: any,
+  formData: FormData
+): Promise<FormState> {
+  try {
+    const validatedFields = LoginValidators.safeParse({
+      userId: formData.get("userId"),
+      password: formData.get("password"),
+      remember: formData.get("remember") === "on",
+    });
+
+    if (!validatedFields.success) {
+      return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Missing Fields. Failed to Login.",
+      };
+    }
+
+    const { userId, password, remember } = validatedFields.data;
+
+    // Check if user exists
+    const user = await db.user.findUnique({
+      where: { userId },
+    });
+
+    if (!user) {
+      return {
+        errors: { userId: ["Invalid student/employee number or password"] },
+        message: "Invalid credentials",
+      };
+    }
+
+    const passwordMatch = password === user.password;
+
+    if (!passwordMatch) {
+      return {
+        errors: { password: ["Invalid username or password"] },
+        message: "Invalid credentials",
+      };
+    }
+
+    if (!user.isActive) {
+      return {
+        errors: { userId: ["Account is not active"] },
+        message:
+          "Your account is not active. Please contact the administrator.",
+      };
+    }
+
+    await setAuthCookie(
+      { id: user.id, role: user.role, userType: user.userType },
+      remember ?? false
+    );
+
+    // Get redirect URL from form data if it exists
+    const redirectUrl = formData.get("redirect")?.toString() || "";
+
+    // Default to role-specific dashboard
+    let finalRedirect: (typeof ROLE_CONFIG)[UserRole]["dashboard"] =
+      ROLE_CONFIG[user.role as UserRole].dashboard;
+
+    // Use redirect URL only if it's valid for the user's role and matches a known dashboard
+    if (
+      redirectUrl &&
+      redirectUrl === ROLE_CONFIG[user.role as UserRole].dashboard
+    ) {
+      finalRedirect =
+        redirectUrl as (typeof ROLE_CONFIG)[UserRole]["dashboard"];
+    }
+
+    return {
+      success: true,
+      message: "Login successful",
+      user: { role: user.role, id: user.id, userType: user.userType },
+      redirect: finalRedirect,
+    };
+  } catch (error) {
+    console.error("Login error:", error);
+    return {
+      message: "An error occurred while logging in",
+      errors: {},
+    };
+  }
+}
+
+export async function logoutAction() {
+  try {
+    const cookieStore = await cookies();
+
+    // Clear the session cookie
+    cookieStore.delete("kld-election-auth-session");
+
+    return {
+      success: true,
+      message: "Logout successful",
+      redirect: "/auth/sign-in",
+    };
+  } catch (error) {
+    console.error("Logout error:", error);
+    return {
+      success: false,
+      message: "An error occurred while logging out",
+    };
+  }
+}
 
 export async function updateUserMeta(formData: {
   year?: string | null;
@@ -31,12 +164,12 @@ export async function updateUserMeta(formData: {
 }) {
   const session = await getServerSession();
 
-  if (!session?.user?.id) {
+  if (!session) {
     throw new Error("Unauthorized");
   }
 
   await db.user.update({
-    where: { id: session.user.id },
+    where: { id: session.id },
     data: {
       year: formData.year,
       course: formData.course,
@@ -107,7 +240,7 @@ export const createAccount = async (values: z.infer<typeof UserValidators>) => {
 
     await createSystemLog(
       "Account Created",
-      session?.user?.id,
+      session?.id,
       `Account created: ${validatedData.email}`
     );
 
@@ -141,7 +274,7 @@ export const updateAccount = async (
 
     await createSystemLog(
       "Account Updated",
-      session?.user?.id,
+      session?.id,
       `Updated account: ${response.email}`
     );
     return { success: "Account updated successfully.", data: response };
@@ -168,7 +301,7 @@ export const archiveAccount = async (id: string, isActive: boolean) => {
 
     await createSystemLog(
       `Account ${successText}`,
-      session?.user?.id,
+      session?.id,
       `Account ${successText}: ${response.email}`
     );
 
@@ -192,7 +325,7 @@ export const approveUser = async (id: string) => {
 
     await createSystemLog(
       "User Approved",
-      session?.user?.id,
+      session?.id,
       `Approved user: ${response.email}`
     );
 
@@ -216,7 +349,7 @@ export const rejectUser = async (id: string) => {
 
     await createSystemLog(
       "User Rejected",
-      session?.user?.id,
+      session?.id,
       `Rejected user: ${response.email}`
     );
 
@@ -264,7 +397,7 @@ export const createPositionTemplate = async (
 
     await createSystemLog(
       "Position Template Created",
-      session?.user?.id,
+      session?.id,
       `Template created: ${validatedData.name}`
     );
 
@@ -323,7 +456,7 @@ export const updatePositionTemplate = async (
 
     await createSystemLog(
       "Position Template Updated",
-      session?.user?.id,
+      session?.id,
       `Template updated: ${response.name}`
     );
 
@@ -360,7 +493,7 @@ export const deletePositionTemplate = async (id: string) => {
 
     await createSystemLog(
       "Position Template Deleted",
-      session?.user?.id,
+      session?.id,
       `Template deleted: ${template.name}`
     );
 
@@ -391,7 +524,7 @@ export const togglePositionTemplateStatus = async (
 
     await createSystemLog(
       `Position Template ${statusText}`,
-      session?.user?.id,
+      session?.id,
       `Template ${statusText}: ${response.name}`
     );
 
@@ -425,7 +558,7 @@ export const archiveElection = async (id: string, isActive: boolean) => {
 
     await createSystemLog(
       `Election ${successText}`,
-      session?.user?.id,
+      session?.id,
       `Election ${successText}: ${response.title}`
     );
 
@@ -443,7 +576,7 @@ export const createElection = async (
   const session = await getServerSession();
 
   try {
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return { error: "You must be logged in to create an election." };
     }
 
@@ -501,7 +634,7 @@ export const createElection = async (
         voterRestriction: validatedData.voterRestriction,
         isSpecialized: validatedData.isSpecialized || false,
         uniqueCode: uniqueCode,
-        createdBy: session.user.id,
+        createdBy: session.id,
         positions: {
           create: validatedData.positions.map((position) => ({
             title: position.title,
@@ -516,7 +649,7 @@ export const createElection = async (
 
     await createSystemLog(
       "Election Created",
-      session.user.id,
+      session.id,
       `Election created: ${validatedData.title}${uniqueCode ? ` (Code: ${uniqueCode})` : ""}`
     );
 
@@ -547,7 +680,7 @@ export const updateElection = async (
   const session = await getServerSession();
 
   try {
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return { error: "You must be logged in to update an election." };
     }
 
@@ -641,7 +774,7 @@ export const updateElection = async (
 
     await createSystemLog(
       "Election Updated",
-      session.user.id,
+      session.id,
       `Election updated: ${response.title}${uniqueCode ? ` (Code: ${uniqueCode})` : ""}`
     );
 
@@ -669,14 +802,14 @@ export const markElectionAsOfficial = async (id: string) => {
   const session = await getServerSession();
 
   try {
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return {
         error: "You must be logged in to mark an election as official.",
       };
     }
 
     // Check if user has permission (COMELEC or POLL_WATCHER)
-    const userRole = session.user.role;
+    const userRole = session.role;
     if (userRole !== "COMELEC" && userRole !== "POLL_WATCHER") {
       return {
         error: "You do not have permission to mark elections as official.",
@@ -808,7 +941,7 @@ export const markElectionAsOfficial = async (id: string) => {
 
     await createSystemLog(
       "Election Marked as Official",
-      session.user.id,
+      session.id,
       `Election marked as official: ${response.title} by ${userRole}`
     );
 
@@ -849,7 +982,7 @@ export const deleteElection = async (id: string) => {
 
     await createSystemLog(
       "Election Deleted",
-      session?.user?.id,
+      session?.id,
       `Election deleted: ${election.title}`
     );
 
@@ -960,7 +1093,7 @@ export const archivePartyList = async (id: string, isActive: boolean) => {
 
     await createSystemLog(
       `Party ${successText}`,
-      session?.user?.id,
+      session?.id,
       `Party ${successText}: ${response.name}`
     );
 
@@ -999,7 +1132,7 @@ export async function updatePartyApplicationStatus(
 export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
   const session = await getServerSession();
 
-  if (!session || session.user?.role !== "SUPERADMIN") {
+  if (!session || session?.role !== "SUPERADMIN") {
     return { error: "Unauthorized. Only superadmins can bulk create users." };
   }
 
@@ -1195,7 +1328,7 @@ export const bulkCreateUsers = async (fileBase64: string, fileName: string) => {
     // Create system log
     await createSystemLog(
       "Bulk Account Creation",
-      session?.user?.id,
+      session?.id,
       `Created ${createdUsers.length} user(s) from Excel file. ${errors.length} error(s).`
     );
 
@@ -1241,11 +1374,11 @@ export async function updateCandidateStatus(
 export async function applyPartyAction(partyId: string) {
   try {
     const session = await getServerSession();
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return { success: false, message: "You must be logged in to apply." };
     }
 
-    const userId = session.user.id;
+    const userId = session.id;
 
     // Check if already applied or a member
     const existing = await db.partyApplication.findFirst({
@@ -1276,6 +1409,106 @@ export async function applyPartyAction(partyId: string) {
     };
   } catch (error) {
     console.error("Apply party error:", error);
+    return { success: false, message: "An unexpected error occurred." };
+  }
+}
+
+export async function removePartyApplication(partyId: string) {
+  try {
+    const session = await getServerSession();
+    if (!session?.id) {
+      return { success: false, message: "You must be logged in to remove your application." };
+    }
+
+    const userId = session.id;
+
+    // Check if application exists
+    const existing = await db.partyApplication.findFirst({
+      where: { userId, partyId },
+    });
+
+    if (!existing) {
+      return {
+        success: false,
+        message: "You don't have an application for this party.",
+      };
+    }
+
+    // Delete the application
+    await db.partyApplication.delete({
+      where: { id: existing.id },
+    });
+
+    revalidatePath("/user/party-list");
+
+    return {
+      success: true,
+      message: "Application removed successfully. You can now apply to another party.",
+    };
+  } catch (error) {
+    console.error("Remove party application error:", error);
+    return { success: false, message: "An unexpected error occurred." };
+  }
+}
+
+export async function withdrawCandidacy(candidateId: string) {
+  try {
+    const session = await getServerSession();
+    if (!session?.id) {
+      return { success: false, message: "You must be logged in to withdraw your candidacy." };
+    }
+
+    const userId = session.id;
+
+    // Check if candidacy exists and belongs to the user
+    const candidate = await db.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        election: true,
+        votes: true,
+      },
+    });
+
+    if (!candidate) {
+      return {
+        success: false,
+        message: "Candidacy application not found.",
+      };
+    }
+
+    if (candidate.userId !== userId) {
+      return {
+        success: false,
+        message: "You are not authorized to withdraw this candidacy.",
+      };
+    }
+
+    // Check if election has started (optional: prevent withdrawal after election starts)
+    const now = new Date();
+    const electionStarted = candidate.election.electionStartDate <= now;
+
+    // Check if votes have been cast
+    const hasVotes = candidate.votes.length > 0;
+
+    // Delete the candidate (votes will be cascade deleted)
+    await db.candidate.delete({
+      where: { id: candidateId },
+    });
+
+    revalidatePath("/user/candidacy-application");
+    revalidatePath(`/user/election/${candidate.electionId}`);
+
+    let message = "Candidacy withdrawn successfully. You can now apply to another position.";
+    if (hasVotes) {
+      message = "Candidacy withdrawn successfully. All votes cast for you have been removed.";
+    }
+
+    return {
+      success: true,
+      message,
+    };
+  } catch (error) {
+    console.error("Withdraw candidacy error:", error);
     return { success: false, message: "An unexpected error occurred." };
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ElectionWithProps } from "@/types/interface";
 import {
   Table,
@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -25,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ImageUpload from "@/components/image-upload";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { useRouter } from "next/navigation";
+import { User } from '@prisma/client';
 
 interface Props {
   election: ElectionWithProps;
@@ -32,19 +32,35 @@ interface Props {
 
 export default function PositionsTable({ election }: Props) {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [platform, setPlatform] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
 
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    fetchFullUser();
+  }, []);
+
+  const fetchFullUser = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      if (!response.ok) throw new Error("Failed to fetch user");
+      const data = await response.json();
+      setUser(data.user);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // Check if the user has already applied for any position
-  const userApplication = session?.user?.id
-    ? election.candidates.find((c) => c.userId === session.user.id)
+  const userApplication = user?.id
+    ? election.candidates.find((c) => c.userId === user.id)
     : null;
 
   const handleSubmit = async () => {
-    if (!session?.user?.id || !selectedPosition)
+    if (!user?.id || !selectedPosition)
       return toast.error("Something went wrong");
 
     if (!photoUrl) return toast.error("Please upload a formal photo");
@@ -138,12 +154,12 @@ export default function PositionsTable({ election }: Props) {
                     <div className="flex flex-col gap-4 mt-4">
                       <div className="flex items-center gap-4">
                         <Avatar>
-                          <AvatarImage src={session?.user?.image ?? ""} />
+                          <AvatarImage src={user?.image ?? ""} />
                           <AvatarFallback>
-                            {session?.user?.name?.[0]}
+                            {user?.name?.[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{session?.user?.name}</span>
+                        <span>{user?.name}</span>
                       </div>
 
                       <div>

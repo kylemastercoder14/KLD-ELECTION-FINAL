@@ -1,6 +1,6 @@
 import Heading from "@/components/heading";
 import db from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { columns } from "./_components/columns";
 import { DataTable } from "@/components/data-table";
@@ -17,10 +17,10 @@ type GroupedVote = {
 
 const Page = async () => {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/auth/sign-in");
+  if (!session?.id) redirect("/auth/sign-in");
 
   const votes = await db.vote.findMany({
-    where: { voterId: session.user.id },
+    where: { voterId: session.id },
     include: {
       candidate: {
         include: {

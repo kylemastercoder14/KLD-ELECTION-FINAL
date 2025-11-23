@@ -28,7 +28,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2, GripVertical, Share2, Copy, Check } from "lucide-react";
+import {
+  CalendarIcon,
+  Plus,
+  Trash2,
+  GripVertical,
+  Share2,
+  Copy,
+  Check,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getLocalTime } from "@/lib/date-utils";
@@ -175,7 +183,7 @@ const ElectionForm = ({
         setGeneratedCode(response.uniqueCode);
         setShareDialogOpen(true);
       } else {
-        router.push("/comelec/election");
+        router.push("/superadmin/election");
       }
     } catch (error) {
       console.error("Form submission failed:", error);
@@ -229,12 +237,12 @@ const ElectionForm = ({
 
   return (
     <>
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="grid gap-3.5">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid gap-3.5">
             <FormField
-            control={form.control}
-            name="title"
+              control={form.control}
+              name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
@@ -243,7 +251,7 @@ const ElectionForm = ({
                   <FormControl>
                     <Input
                       disabled={isSubmitting}
-            placeholder="Enter election title"
+                      placeholder="Enter election title"
                       {...field}
                     />
                   </FormControl>
@@ -253,8 +261,8 @@ const ElectionForm = ({
             />
 
             <FormField
-            control={form.control}
-            name="description"
+              control={form.control}
+              name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
@@ -263,7 +271,7 @@ const ElectionForm = ({
                   <FormControl>
                     <Textarea
                       disabled={isSubmitting}
-            placeholder="Enter election description"
+                      placeholder="Enter election description"
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -275,9 +283,9 @@ const ElectionForm = ({
                   <FormMessage />
                 </FormItem>
               )}
-          />
+            />
 
-          <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
+            <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
               <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
                 <div className="lg:col-span-3">
                   <FormField
@@ -426,7 +434,9 @@ const ElectionForm = ({
                             disabled={isSubmitting}
                           />
                         </FormControl>
-                        <FormDescription>Time the campaign ends.</FormDescription>
+                        <FormDescription>
+                          Time the campaign ends.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -517,7 +527,7 @@ const ElectionForm = ({
               <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
                 <div className="lg:col-span-3">
                   <FormField
-              control={form.control}
+                    control={form.control}
                     name="electionEndDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -567,7 +577,7 @@ const ElectionForm = ({
                 </div>
                 <div className="lg:col-span-2">
                   <FormField
-              control={form.control}
+                    control={form.control}
                     name="electionEndTime"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -582,12 +592,14 @@ const ElectionForm = ({
                             disabled={isSubmitting}
                           />
                         </FormControl>
-                        <FormDescription>Time the election ends.</FormDescription>
+                        <FormDescription>
+                          Time the election ends.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
-            />
-          </div>
+                  />
+                </div>
               </div>
             </div>
 
@@ -597,7 +609,8 @@ const ElectionForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Voter Restriction <span className="text-destructive">*</span>
+                    Voter Restriction{" "}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value)}
@@ -632,12 +645,12 @@ const ElectionForm = ({
             />
 
             <FormField
-            control={form.control}
+              control={form.control}
               name="isSpecialized"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Label className="hover:bg-green-50 flex items-start gap-2 rounded-lg border p-3 has-aria-checked:border-green-600 has-aria-checked:bg-green-50 dark:has-aria-checked:border-green-900 dark:has-aria-checked:bg-green-950">
+                    <Label className="hover:bg-green-50 dark:hover:bg-green-950 flex items-start gap-2 rounded-lg border p-3 has-aria-checked:border-green-600 has-aria-checked:bg-green-50 dark:has-aria-checked:border-green-900 dark:has-aria-checked:bg-green-950">
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
@@ -649,8 +662,8 @@ const ElectionForm = ({
                         </p>
                         <p className="text-muted-foreground text-sm">
                           Enable this if the election is exclusive to an
-                          organization or specific subgroup. A unique access code
-                          will be generated.
+                          organization or specific subgroup. A unique access
+                          code will be generated.
                         </p>
                       </div>
                     </Label>
@@ -666,7 +679,8 @@ const ElectionForm = ({
                   <div>
                     <p className="text-sm font-medium">Shareable Link</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Share this link with voters for specialized election access
+                      Share this link with voters for specialized election
+                      access
                     </p>
                   </div>
                   <Button
@@ -739,7 +753,9 @@ const ElectionForm = ({
                       <TableRow>
                         <TableHead className="w-[50px]">#</TableHead>
                         <TableHead>Position Title</TableHead>
-                        <TableHead className="w-[150px]">Winner Count</TableHead>
+                        <TableHead className="w-[150px]">
+                          Winner Count
+                        </TableHead>
                         <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -747,7 +763,7 @@ const ElectionForm = ({
                       {fields.map((field, index) => (
                         <TableRow key={field.id}>
                           <TableCell>
-          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               <GripVertical className="size-4 text-muted-foreground" />
                               <span className="text-sm">{index + 1}</span>
                             </div>
@@ -815,38 +831,35 @@ const ElectionForm = ({
             </div>
 
             <div className="flex items-center gap-2 pt-4">
-            <Button
-              type="button"
-              onClick={() => router.back()}
-              variant="ghost"
-              className="w-fit"
+              <Button
+                type="button"
+                onClick={() => router.back()}
+                variant="ghost"
+                className="w-fit"
                 disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
+              >
+                Cancel
+              </Button>
               <Button type="submit" className="w-fit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Share Election Link</DialogTitle>
             <DialogDescription>
-              Share this unique link with voters to access the specialized election.
+              Share this unique link with voters to access the specialized
+              election.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                value={getShareableLink()}
-                className="flex-1"
-              />
+              <Input readOnly value={getShareableLink()} className="flex-1" />
               <Button
                 type="button"
                 size="icon"

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 
@@ -7,7 +7,7 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession();
 
-    if (!session?.user?.id) {
+    if (!session?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,7 +31,7 @@ export async function PUT(req: Request) {
 
     // Get user with password
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: session.id },
       select: { id: true, password: true, email: true },
     });
 

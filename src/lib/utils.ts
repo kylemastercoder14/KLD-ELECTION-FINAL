@@ -1,3 +1,4 @@
+import { UserRole, UserType } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { customAlphabet } from "nanoid";
 import { twMerge } from "tailwind-merge";
@@ -5,6 +6,28 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export type FormState = {
+  errors?: {
+    userId?: string[];
+    password?: string[];
+    remember?: string[];
+  };
+  message: string;
+  success?: boolean;
+  redirect?: string;
+  user?: {
+    role: UserRole;
+    id: string;
+    userType?: UserType | null;
+  };
+};
+
+export const initialState: FormState = {
+  errors: {},
+  message: "",
+  success: false,
+};
 
 export const generatePassword = () => {
   const length = 12;

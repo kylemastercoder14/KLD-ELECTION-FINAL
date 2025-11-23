@@ -107,7 +107,7 @@ export const columns: ColumnDef<PartyWithCandidates>[] = [
     },
     cell: ({ row }) => {
       const head = row.original.head;
-      return <span className="ml-2.5">{head?.name || "No head/manager assigned"}</span>;
+      return <span className="ml-2.5">{head?.name || "--"}</span>;
     },
   },
   {

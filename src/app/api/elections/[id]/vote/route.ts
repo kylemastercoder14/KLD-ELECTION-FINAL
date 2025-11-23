@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import db from "@/lib/db";
 import { sendVoteToEmail } from "@/hooks/use-email-template";
 import { syncElectionStatusesToNow } from "@/lib/election-status";
@@ -11,7 +11,7 @@ export async function POST(
   try {
     const session = await getServerSession();
 
-    if (!session?.user?.email) {
+    if (!session?.email) {
       return NextResponse.json(
         { message: "Unauthorized. Please log in." },
         { status: 401 }
@@ -20,7 +20,7 @@ export async function POST(
 
     // Get the logged-in user
     const user = await db.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.email },
     });
 
     if (!user) {

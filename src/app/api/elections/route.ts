@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/get-session";
+import { getServerSession } from "@/lib/session";
 import db from "@/lib/db";
 import { ElectionStatus } from "@prisma/client";
 import { syncElectionStatusesToNow } from "@/lib/election-status";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const session = await getServerSession();
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
