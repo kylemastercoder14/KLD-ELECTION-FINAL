@@ -21,7 +21,7 @@ export default async function Layout({
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar role={user.role} />
       <SidebarInset>
         <SiteHeader user={user} />
         <main className="flex-1 p-6 overflow-auto">{children}</main>

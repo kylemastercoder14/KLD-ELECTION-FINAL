@@ -22,7 +22,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
 import Image from "next/image";
 import { toast } from "sonner";
 import { markElectionAsOfficial } from "@/actions";
@@ -38,7 +37,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useReactToPrint } from "react-to-print";
-import { ElectionStatus } from "@prisma/client";
+import { ElectionStatus, User } from "@prisma/client";
 
 // Skeleton loader
 const SkeletonCard = () => (
@@ -85,12 +84,22 @@ const LiveResultsPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const electionId = params.id;
-  const { data: session } = authClient.useSession();
+  const [user, setUser] = useState<User | null>(null);
 
-  // Extract user from nested session structure
-  // Better Auth returns { session: { user: ... } } or { user: ... }
-  const sessionData = session as any;
-  const user = sessionData?.session?.user || sessionData?.user || null;
+  useEffect(() => {
+    fetchFullUser();
+  }, []);
+
+  const fetchFullUser = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      if (!response.ok) throw new Error("Failed to fetch user");
+      const data = await response.json();
+      setUser(data.user);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const [election, setElection] = useState<Election | null>(null);
   const [turnout, setTurnout] = useState<TurnoutStats | null>(null);
