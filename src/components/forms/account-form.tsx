@@ -48,9 +48,11 @@ const AccountForm = ({
       return allRoles.filter((role) => role !== "SUPERADMIN");
     }
 
-    // ADMIN can assign everything except SUPERADMIN
+    // ADMIN can assign everything EXCEPT SUPERADMIN and ADMIN
     if (currentUserRole === "ADMIN") {
-      return allRoles.filter((role) => role !== "SUPERADMIN");
+      return allRoles.filter(
+        (role) => role !== "SUPERADMIN" && role !== "ADMIN"
+      );
     }
 
     // Other roles cannot assign anything

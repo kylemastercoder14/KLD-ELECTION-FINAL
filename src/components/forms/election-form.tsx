@@ -22,14 +22,8 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createElection, updateElection } from "@/actions";
-import { Calendar } from "@/components/ui/calendar";
+import { getLocalTime } from "@/lib/date-utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  CalendarIcon,
   Plus,
   Trash2,
   GripVertical,
@@ -37,9 +31,6 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { getLocalTime } from "@/lib/date-utils";
 import {
   Select,
   SelectContent,
@@ -57,7 +48,6 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TimePicker } from "@/components/ui/time-picker";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +58,32 @@ import {
 
 type ElectionWithPositions = Election & {
   positions: Position[];
+};
+
+// Helper function to convert Date to datetime-local string format (YYYY-MM-DDTHH:mm)
+const dateToDateTimeLocal = (date: Date | null | undefined): string => {
+  if (!date) return "";
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+// Helper function to convert datetime-local string to Date and separate time
+const dateTimeLocalToDateAndTime = (
+  dateTimeLocal: string
+): { date: Date; time: string } | null => {
+  if (!dateTimeLocal) return null;
+  const date = new Date(dateTimeLocal);
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return {
+    date: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+    time: `${hours}:${minutes}`,
+  };
 };
 
 const ElectionForm = ({
@@ -121,6 +137,20 @@ const ElectionForm = ({
     },
   });
 
+  // Separate state for datetime-local inputs (not part of validator)
+  const [campaignStartDateTime, setCampaignStartDateTime] = useState(
+    dateToDateTimeLocal(initialData?.campaignStartDate)
+  );
+  const [campaignEndDateTime, setCampaignEndDateTime] = useState(
+    dateToDateTimeLocal(initialData?.campaignEndDate)
+  );
+  const [electionStartDateTime, setElectionStartDateTime] = useState(
+    dateToDateTimeLocal(initialData?.electionStartDate)
+  );
+  const [electionEndDateTime, setElectionEndDateTime] = useState(
+    dateToDateTimeLocal(initialData?.electionEndDate)
+  );
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "positions",
@@ -154,6 +184,10 @@ const ElectionForm = ({
         voterRestriction: initialData.voterRestriction || VoterRestriction.ALL,
         isSpecialized: initialData?.isSpecialized || false,
       });
+      setCampaignStartDateTime(dateToDateTimeLocal(initialData?.campaignStartDate));
+      setCampaignEndDateTime(dateToDateTimeLocal(initialData?.campaignEndDate));
+      setElectionStartDateTime(dateToDateTimeLocal(initialData?.electionStartDate));
+      setElectionEndDateTime(dateToDateTimeLocal(initialData?.electionEndDate));
       setGeneratedCode(initialData.uniqueCode || null);
     }
   }, [initialData, form]);
@@ -163,11 +197,43 @@ const ElectionForm = ({
 
   async function onSubmit(values: z.infer<typeof ElectionValidators>) {
     try {
+      // Convert datetime-local strings to separate date and time
+      const campaignStart = campaignStartDateTime
+        ? dateTimeLocalToDateAndTime(campaignStartDateTime)
+        : null;
+      const campaignEnd = campaignEndDateTime
+        ? dateTimeLocalToDateAndTime(campaignEndDateTime)
+        : null;
+      const electionStart = dateTimeLocalToDateAndTime(electionStartDateTime);
+      const electionEnd = dateTimeLocalToDateAndTime(electionEndDateTime);
+
+      if (!electionStart || !electionEnd) {
+        toast.error("Election start and end dates are required.");
+        return;
+      }
+
+      // Prepare values for validator
+      const submitValues: z.infer<typeof ElectionValidators> = {
+        title: values.title,
+        description: values.description,
+        campaignStartDate: campaignStart?.date,
+        campaignEndDate: campaignEnd?.date,
+        campaignStartTime: campaignStart?.time,
+        campaignEndTime: campaignEnd?.time,
+        electionStartDate: electionStart.date,
+        electionEndDate: electionEnd.date,
+        electionStartTime: electionStart.time,
+        electionEndTime: electionEnd.time,
+        positions: values.positions,
+        voterRestriction: values.voterRestriction,
+        isSpecialized: values.isSpecialized,
+      };
+
       let response;
       if (initialData?.id) {
-        response = await updateElection(initialData.id, values);
+        response = await updateElection(initialData.id, submitValues);
       } else {
-        response = await createElection(values);
+        response = await createElection(submitValues);
       }
 
       if (response?.error) {
@@ -221,7 +287,7 @@ const ElectionForm = ({
   };
 
   const getShareableLink = () => {
-    return `http://localhost:3000/election/${generatedCode}/vote-now`;
+    return `https://votenyo.com/election/${generatedCode}/vote-now`;
   };
 
   const copyToClipboard = async () => {
@@ -286,321 +352,129 @@ const ElectionForm = ({
             />
 
             <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
-              <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
-                <div className="lg:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="campaignStartDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Campaign Start Date{" "}
-                          <span className="text-muted-foreground">
-                            (optional)
-                          </span>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting}
-                              >
-                                {field.value ? (
-                                  format(field.value as Date, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormDescription>
-                          When the campaign period begins.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <FormItem className="flex flex-col">
+                <FormLabel>
+                  Campaign Start Date & Time{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    value={campaignStartDateTime || ""}
+                    onChange={(e) => {
+                      setCampaignStartDateTime(e.target.value);
+                      // Update separate date and time fields for validation
+                      const dt = dateTimeLocalToDateAndTime(e.target.value);
+                      if (dt) {
+                        form.setValue("campaignStartDate", dt.date);
+                        form.setValue("campaignStartTime", dt.time);
+                      } else {
+                        form.setValue("campaignStartDate", undefined);
+                        form.setValue("campaignStartTime", undefined);
+                      }
+                    }}
+                    disabled={isSubmitting}
                   />
-                </div>
-                <div className="lg:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="campaignStartTime"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Campaign Start Time{" "}
-                          <span className="text-muted-foreground">
-                            (optional)
-                          </span>
-                        </FormLabel>
-                        <FormControl>
-                          <TimePicker
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Time the campaign begins.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                </FormControl>
+                <FormDescription>
+                  When the campaign period begins.
+                </FormDescription>
+              </FormItem>
 
-              <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
-                <div className="lg:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="campaignEndDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Campaign End Date{" "}
-                          <span className="text-muted-foreground">
-                            (optional)
-                          </span>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormDescription>
-                          When the campaign period ends.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <FormItem className="flex flex-col">
+                <FormLabel>
+                  Campaign End Date & Time{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    value={campaignEndDateTime || ""}
+                    onChange={(e) => {
+                      setCampaignEndDateTime(e.target.value);
+                      // Update separate date and time fields for validation
+                      const dt = dateTimeLocalToDateAndTime(e.target.value);
+                      if (dt) {
+                        form.setValue("campaignEndDate", dt.date);
+                        form.setValue("campaignEndTime", dt.time);
+                      } else {
+                        form.setValue("campaignEndDate", undefined);
+                        form.setValue("campaignEndTime", undefined);
+                      }
+                    }}
+                    disabled={isSubmitting}
                   />
-                </div>
-                <div className="lg:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="campaignEndTime"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Campaign End Time{" "}
-                          <span className="text-muted-foreground">
-                            (optional)
-                          </span>
-                        </FormLabel>
-                        <FormControl>
-                          <TimePicker
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Time the campaign ends.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                </FormControl>
+                <FormDescription>
+                  When the campaign period ends.
+                </FormDescription>
+              </FormItem>
             </div>
 
             <div className="grid lg:grid-cols-2 grid-cols-1 gap-3.5">
-              <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
-                <div className="lg:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="electionStartDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Election Start Date{" "}
-                          <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormDescription>
-                          When voting begins (must be today or in the future).
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <FormItem className="flex flex-col">
+                <FormLabel>
+                  Election Start Date & Time{" "}
+                  <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    value={electionStartDateTime || ""}
+                    onChange={(e) => {
+                      setElectionStartDateTime(e.target.value);
+                      // Update separate date and time fields for validation
+                      const dt = dateTimeLocalToDateAndTime(e.target.value);
+                      if (dt) {
+                        form.setValue("electionStartDate", dt.date);
+                        form.setValue("electionStartTime", dt.time);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    min={new Date().toISOString().slice(0, 16)}
                   />
-                </div>
-                <div className="lg:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="electionStartTime"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Election Start Time{" "}
-                          <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <TimePicker
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Time the election begins.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                </FormControl>
+                <FormDescription>
+                  When voting begins (must be today or in the future).
+                </FormDescription>
+                {form.formState.errors.electionStartDate && (
+                  <p className="text-sm font-medium text-destructive">
+                    {form.formState.errors.electionStartDate.message}
+                  </p>
+                )}
+              </FormItem>
 
-              <div className="grid lg:grid-cols-5 grid-cols-1 gap-3.5">
-                <div className="lg:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="electionEndDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Election End Date{" "}
-                          <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                              }
-                              autoFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormDescription>
-                          When voting ends (must be today or in the future).
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <FormItem className="flex flex-col">
+                <FormLabel>
+                  Election End Date & Time{" "}
+                  <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    value={electionEndDateTime || ""}
+                    onChange={(e) => {
+                      setElectionEndDateTime(e.target.value);
+                      // Update separate date and time fields for validation
+                      const dt = dateTimeLocalToDateAndTime(e.target.value);
+                      if (dt) {
+                        form.setValue("electionEndDate", dt.date);
+                        form.setValue("electionEndTime", dt.time);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    min={new Date().toISOString().slice(0, 16)}
                   />
-                </div>
-                <div className="lg:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="electionEndTime"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>
-                          Election End Time{" "}
-                          <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <TimePicker
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Time the election ends.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                </FormControl>
+                <FormDescription>
+                  When voting ends (must be today or in the future).
+                </FormDescription>
+                {form.formState.errors.electionEndDate && (
+                  <p className="text-sm font-medium text-destructive">
+                    {form.formState.errors.electionEndDate.message}
+                  </p>
+                )}
+              </FormItem>
             </div>
 
             <FormField

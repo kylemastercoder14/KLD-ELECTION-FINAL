@@ -93,8 +93,12 @@ const Page = () => {
     (e) => fullUser && canUserVote(fullUser, e.voterRestriction as any)
   );
 
-  const ongoingElections = eligibleElections.filter((e) => e.status === "ONGOING");
-  const upcomingElections = eligibleElections.filter((e) => e.status === "UPCOMING");
+  const ongoingElections = eligibleElections.filter(
+    (e) => e.status === "ONGOING"
+  );
+  const upcomingElections = eligibleElections.filter(
+    (e) => e.status === "UPCOMING"
+  );
 
   // Stats: only count eligible elections
   const votedCount = eligibleElections.filter((e) => e.hasVoted).length;
@@ -107,8 +111,121 @@ const Page = () => {
 
   return (
     <div>
+      {/* Active Elections */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold mb-4">Active Elections</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          {loading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-4 w-3/4 mt-2" />
+                </CardContent>
+              </Card>
+            ))
+          ) : ongoingElections.length > 0 ? (
+            ongoingElections.map((election) => {
+              const eligible =
+                fullUser &&
+                canUserVote(fullUser, election.voterRestriction as any) &&
+                !election.hasVoted;
+
+              return (
+                <Card
+                  key={election.id}
+                  className="hover:shadow-md transition-shadow"
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">
+                        {election.title}
+                      </CardTitle>
+                      <Badge variant={getStatusVariant(election.status)}>
+                        {election.status}
+                      </Badge>
+                    </div>
+                    <CardDescription>
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: election.description,
+                        }}
+                      />
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {new Date(
+                            election.electionStartDate
+                          ).toLocaleDateString()}{" "}
+                          -{" "}
+                          {new Date(
+                            election.electionEndDate
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span>{election._count.candidates} candidates</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>
+                          {election.positions
+                            ?.map((p) => p.title)
+                            .filter(Boolean)
+                            .join(", ") || "No positions"}
+                        </span>
+                      </div>
+
+                      <div className="pt-2">
+                        <Button
+                          asChild
+                          className="w-full"
+                          disabled={!eligible && !election.hasVoted}
+                        >
+                          <Link
+                            href={
+                              election.hasVoted
+                                ? `/user/election/${election.id}/results`
+                                : eligible
+                                  ? `/user/election/${election.id}/vote-now`
+                                  : "#"
+                            }
+                          >
+                            <Vote className="w-4 h-4 mr-2" />
+                            {election.hasVoted
+                              ? "View Live Result"
+                              : eligible
+                                ? "Vote Now"
+                                : `Restricted: ${getVoterRestrictionDescription(
+                                    election.voterRestriction as any
+                                  )}`}
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <p className="text-muted-foreground col-span-full">
+              No active elections available for your user type.
+            </p>
+          )}
+        </div>
+      </div>
       {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-6 mt-8 md:grid-cols-2 lg:grid-cols-4 mb-8">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -131,7 +248,9 @@ const Page = () => {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{eligibleElections.length}</div>
+                <div className="text-2xl font-bold">
+                  {eligibleElections.length}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Elections you&apos;re eligible for
                 </p>
@@ -147,9 +266,7 @@ const Page = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{votedCount}</div>
-                <p className="text-xs text-muted-foreground">
-                  Your votes cast
-                </p>
+                <p className="text-xs text-muted-foreground">Your votes cast</p>
               </CardContent>
             </Card>
 
@@ -162,7 +279,10 @@ const Page = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {eligibleElections.reduce((sum, e) => sum + e._count.candidates, 0)}
+                  {eligibleElections.reduce(
+                    (sum, e) => sum + e._count.candidates,
+                    0
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Across eligible elections
@@ -210,112 +330,6 @@ const Page = () => {
           description="Your votes over active elections"
           color="#4ade80"
         />
-      </div>
-
-      {/* Active Elections */}
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold mb-4">Active Elections</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {loading ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-5 w-32 mb-2" />
-                  <Skeleton className="h-4 w-full" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-4 w-3/4 mt-2" />
-                </CardContent>
-              </Card>
-            ))
-          ) : ongoingElections.length > 0 ? (
-            ongoingElections.map((election) => {
-              const eligible =
-                fullUser &&
-                canUserVote(fullUser, election.voterRestriction as any) &&
-                !election.hasVoted;
-
-              return (
-                <Card
-                  key={election.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{election.title}</CardTitle>
-                      <Badge variant={getStatusVariant(election.status)}>
-                        {election.status}
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      <div
-                        dangerouslySetInnerHTML={{ __html: election.description }}
-                      />
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(election.electionStartDate).toLocaleDateString()}{" "}
-                          -{" "}
-                          {new Date(election.electionEndDate).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4" />
-                        <span>{election._count.candidates} candidates</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>
-                          {election.positions
-                            ?.map((p) => p.title)
-                            .filter(Boolean)
-                            .join(", ") || "No positions"}
-                        </span>
-                      </div>
-
-                      <div className="pt-2">
-                        <Button
-                          asChild
-                          className="w-full"
-                          disabled={!eligible && !election.hasVoted}
-                        >
-                          <Link
-                            href={
-                              election.hasVoted
-                                ? `/user/election/${election.id}/results`
-                                : eligible
-                                ? `/user/election/${election.id}/vote-now`
-                                : "#"
-                            }
-                          >
-                            <Vote className="w-4 h-4 mr-2" />
-                            {election.hasVoted
-                              ? "View Live Result"
-                              : eligible
-                              ? "Vote Now"
-                              : `Restricted: ${getVoterRestrictionDescription(
-                                  election.voterRestriction as any
-                                )}`}
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          ) : (
-            <p className="text-muted-foreground col-span-full">
-              No active elections available for your user type.
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );
