@@ -50,12 +50,26 @@ export async function GET(request: Request) {
             votes: true,
           },
         },
+        votes: {
+          where: {
+            voterId: session.id,
+          },
+          select: {
+            voterId: true,
+          },
+        },
       },
     });
 
-    console.log(JSON.stringify(elections, null, 2));
+    const formatted = elections.map((election) => {
+      const { votes, ...rest } = election;
+      return {
+        ...rest,
+        hasVoted: votes.length > 0,
+      };
+    });
 
-    return NextResponse.json(elections, { status: 200 });
+    return NextResponse.json(formatted, { status: 200 });
   } catch (error) {
     console.error("Error fetching elections:", error);
     return NextResponse.json(

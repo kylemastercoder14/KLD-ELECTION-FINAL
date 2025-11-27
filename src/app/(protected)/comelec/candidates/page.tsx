@@ -73,6 +73,15 @@ const Page = async () => {
                 {candidates.filter((c) => c.status === CandidateStatus.REJECTED).length}
               </Badge>
             </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className="bg-transparent data-[state=active]:border-primary dark:data-[state=active]:border-primary h-full rounded-none border-0 border-b-2 border-transparent data-[state=active]:shadow-none"
+            >
+              Archived
+              <Badge className="h-5 min-w-5 rounded-full px-1 text-black dark:text-white bg-accent tabular-nums ml-2">
+                {candidates.filter((c) => !c.isActive).length}
+              </Badge>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -94,6 +103,12 @@ const Page = async () => {
             <DataTable
               columns={columns}
               data={candidates.filter((c) => c.status === CandidateStatus.REJECTED)}
+            />
+          </TabsContent>
+          <TabsContent value="archived">
+            <DataTable
+              columns={columns}
+              data={candidates.filter((c) => !c.isActive)}
             />
           </TabsContent>
         </Tabs>

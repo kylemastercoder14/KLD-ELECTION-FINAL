@@ -1390,6 +1390,44 @@ export async function updateCandidateStatus(
   }
 }
 
+export const archiveCandidate = async (id: string, isActive: boolean) => {
+  const session = await getServerSession();
+
+  try {
+    if (!id) {
+      return { error: "Invalid candidate ID." };
+    }
+
+    const response = await db.candidate.update({
+      where: { id },
+      data: { isActive: !isActive },
+      include: {
+        user: true,
+        position: true,
+        election: true,
+      },
+    });
+
+    const successText = isActive ? "archived" : "restored";
+
+    await createSystemLog(
+      `Candidate ${successText}`,
+      session?.id,
+      `Candidate ${response.user?.name || response.id} ${successText} for position ${response.position.title}`
+    );
+
+    revalidatePath("/comelec/candidates");
+
+    return {
+      success: `Candidate ${successText} successfully.`,
+      data: response,
+    };
+  } catch (error) {
+    console.error("Archive candidate error:", error);
+    return { error: "Failed to update candidate status. Please try again." };
+  }
+};
+
 export async function applyPartyAction(partyId: string) {
   try {
     const session = await getServerSession();

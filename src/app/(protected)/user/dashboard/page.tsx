@@ -39,7 +39,6 @@ interface Election {
     candidates: number;
     votes: number;
   };
-  voters?: string[]; // list of user IDs who voted
   hasVoted?: boolean; // track if current user already voted
 }
 
@@ -73,10 +72,10 @@ const Page = () => {
       const data: Election[] = await response.json();
 
       if (fullUser) {
-        const updated = data.map((election) => {
-          const userVoted = election.voters?.includes(fullUser.id) ?? false;
-          return { ...election, hasVoted: userVoted };
-        });
+        const updated = data.map((election) => ({
+          ...election,
+          hasVoted: election.hasVoted ?? false,
+        }));
         setElections(updated);
       } else {
         setElections(data);

@@ -137,6 +137,28 @@ export const columns: ColumnDef<CandidateWithParty>[] = [
     ),
   },
   {
+    accessorKey: "archived",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Archived
+          <ChevronsUpDown className="h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => (
+      <Badge
+        className={`text-xs capitalize ${row.original.isActive ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200"}`}
+        variant="outline"
+      >
+        {row.original.isActive ? "Active" : "Inactive"}
+      </Badge>
+    ),
+  },
+  {
     accessorKey: "date",
     header: ({ column }) => {
       return (
