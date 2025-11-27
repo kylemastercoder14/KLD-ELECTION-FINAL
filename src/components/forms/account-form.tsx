@@ -59,8 +59,15 @@ const AccountForm = ({
     return [];
   }, [currentUserRole]);
 
-  const form = useForm<z.infer<typeof UserValidators>>({
-    resolver: zodResolver(UserValidators),
+  // Create a conditional validator - password optional when updating
+  const UpdateUserValidators = UserValidators.extend({
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional(),
+  });
+
+  type FormValues = z.infer<typeof UpdateUserValidators>;
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(initialData ? UpdateUserValidators : UserValidators),
     mode: "onChange",
     defaultValues: {
       name: initialData?.name || "",
@@ -68,7 +75,7 @@ const AccountForm = ({
       userId: initialData?.userId || "",
       role: initialData?.role || "USER",
       userType: initialData?.userType || "STUDENT",
-      password: generatePassword(),
+      password: initialData ? undefined : generatePassword(),
     },
   });
 
@@ -80,21 +87,29 @@ const AccountForm = ({
         userId: initialData.userId || "",
         role: initialData.role || "USER",
         userType: initialData?.userType || "STUDENT",
+        password: undefined, // Don't include password when updating
       });
     }
   }, [initialData, form]);
 
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: z.infer<typeof UserValidators>) {
+  async function onSubmit(values: FormValues) {
     try {
       let response;
       if (initialData?.id) {
         // If initialData.id exists, it's an update (PUT)
-        response = await updateAccount(initialData.id, values);
+        // Exclude password from update - it's not shown in the form
+        const { password, ...updateValues } = values;
+        response = await updateAccount(initialData.id, updateValues);
       } else {
         // Otherwise, it's a new creation (POST)
-        response = await createAccount(values);
+        // Password is required for new accounts
+        if (!values.password) {
+          toast.error("Password is required for new accounts.");
+          return;
+        }
+        response = await createAccount(values as z.infer<typeof UserValidators>);
       }
 
       if (response.error) {

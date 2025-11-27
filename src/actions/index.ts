@@ -253,11 +253,16 @@ export const createAccount = async (values: z.infer<typeof UserValidators>) => {
 
 export const updateAccount = async (
   id: string,
-  values: z.infer<typeof UserValidators>
+  values: Partial<z.infer<typeof UserValidators>>
 ) => {
   const session = await getServerSession();
 
-  const validatedData = UserValidators.parse(values);
+  // Create a validator that makes password optional
+  const UpdateUserValidators = UserValidators.extend({
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional(),
+  });
+
+  const validatedData = UpdateUserValidators.parse(values);
   try {
     const existingUser = await db.user.findUnique({
       where: { email: validatedData.email },
@@ -267,9 +272,23 @@ export const updateAccount = async (
       return { error: "Another account with this email already exists." };
     }
 
+    // Only include password in update if it's provided
+    const updateData: Partial<z.infer<typeof UserValidators>> = {
+      name: validatedData.name,
+      email: validatedData.email,
+      userId: validatedData.userId,
+      role: validatedData.role,
+      userType: validatedData.userType,
+    };
+
+    // Only add password if it was provided
+    if (validatedData.password) {
+      updateData.password = validatedData.password;
+    }
+
     const response = await db.user.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
     });
 
     await createSystemLog(
