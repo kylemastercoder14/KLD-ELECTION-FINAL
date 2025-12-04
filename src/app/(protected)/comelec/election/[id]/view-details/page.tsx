@@ -13,6 +13,9 @@ import {
 } from "@/components/ui/table";
 import { getStatusVariant } from "@/lib/utils";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { UserPlus } from "lucide-react";
 
 const voterRestrictionLabels: Record<string, string> = {
   ALL: "All",
@@ -49,12 +52,22 @@ const Page = async (props: {
         <CardHeader>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold flex-1">{election.title}</h1>
-            <Badge
-              variant={getStatusVariant(election.status)}
-              className="capitalize text-base"
-            >
-              {election.status.toLowerCase()}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {election.isSpecialized && (
+                <Button size="sm" asChild>
+                  <Link href={`/comelec/election/${election.id}/manage-candidates`}>
+                    <UserPlus className="size-4 mr-2" />
+                    Manage Candidates
+                  </Link>
+                </Button>
+              )}
+              <Badge
+                variant={getStatusVariant(election.status)}
+                className="capitalize text-base"
+              >
+                {election.status.toLowerCase()}
+              </Badge>
+            </div>
           </div>
           <p className="text-muted-foreground mt-2">{election.description}</p>
         </CardHeader>

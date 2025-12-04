@@ -1569,3 +1569,128 @@ export async function withdrawCandidacy(candidateId: string) {
     return { success: false, message: "An unexpected error occurred." };
   }
 }
+
+export async function addCandidateManually(
+  electionId: string,
+  userId: string,
+  positionId: string,
+  platform: string,
+  imageUrl?: string
+) {
+  try {
+    const session = await getServerSession();
+    if (!session?.id) {
+      return { success: false, message: "You must be logged in to add candidates." };
+    }
+
+    // Check if election exists and is specialized
+    const election = await db.election.findUnique({
+      where: { id: electionId },
+    });
+
+    if (!election) {
+      return {
+        success: false,
+        message: "Election not found.",
+      };
+    }
+
+    if (!election.isSpecialized) {
+      return {
+        success: false,
+        message: "This feature is only available for specialized elections.",
+      };
+    }
+
+    // Check if user exists
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: "User not found.",
+      };
+    }
+
+    // Check if position exists in this election
+    const position = await db.position.findFirst({
+      where: {
+        id: positionId,
+        electionId: electionId,
+      },
+    });
+
+    if (!position) {
+      return {
+        success: false,
+        message: "Position not found in this election.",
+      };
+    }
+
+    // Check if user is already a candidate in this election
+    const existingCandidate = await db.candidate.findFirst({
+      where: {
+        electionId,
+        userId,
+      },
+    });
+
+    if (existingCandidate) {
+      return {
+        success: false,
+        message: "This user is already a candidate in this election.",
+      };
+    }
+
+    // Because of the unique constraint on Candidate.userId,
+    // a user can only be a candidate in ONE election overall.
+    const existingInOtherElection = await db.candidate.findFirst({
+      where: {
+        userId,
+      },
+      include: {
+        election: true,
+        position: true,
+      },
+    });
+
+    if (existingInOtherElection) {
+      return {
+        success: false,
+        message: `This user is already a candidate for "${existingInOtherElection.election.title}" (${existingInOtherElection.position.title}). A user can only be a candidate in one election at a time.`,
+      };
+    }
+
+    // Create candidate - automatically approve for specialized elections
+    const candidate = await db.candidate.create({
+      data: {
+        userId,
+        electionId,
+        positionId,
+        platform: platform || "No platform provided.",
+        imageUrl: imageUrl || null,
+        status: "APPROVED", // Auto-approve for specialized elections
+      },
+    });
+
+    await createSystemLog(
+      "Candidate Added Manually",
+      session.id,
+      `Added candidate: ${user.name} to position ${position.title} in election ${election.title}`
+    );
+
+    revalidatePath(`/comelec/election/${electionId}`);
+    revalidatePath(`/comelec/election/${electionId}/manage-candidates`);
+
+    return {
+      success: true,
+      message: "Candidate added successfully.",
+      data: candidate,
+    };
+  } catch (error) {
+    console.error("Add candidate manually error:", error);
+    return { success: false, message: "An unexpected error occurred." };
+  }
+}
