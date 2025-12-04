@@ -682,7 +682,7 @@ export const createElection = async (
   } catch (error) {
     console.error("Create election error:", error);
     if (error instanceof z.ZodError) {
-      const details = error.errors
+      const details = error.issues
         .map((issue) => {
           const field = issue.path.join(".") || "form";
           return `${field}: ${issue.message}`;
@@ -813,7 +813,7 @@ export const updateElection = async (
   } catch (error) {
     console.error("Update election error:", error);
     if (error instanceof z.ZodError) {
-      const details = error.errors
+      const details = error.issues
         .map((issue) => {
           const field = issue.path.join(".") || "form";
           return `${field}: ${issue.message}`;
