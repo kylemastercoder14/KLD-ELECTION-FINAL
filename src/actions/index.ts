@@ -682,8 +682,14 @@ export const createElection = async (
   } catch (error) {
     console.error("Create election error:", error);
     if (error instanceof z.ZodError) {
+      const details = error.errors
+        .map((issue) => {
+          const field = issue.path.join(".") || "form";
+          return `${field}: ${issue.message}`;
+        })
+        .join(" | ");
       return {
-        error: "Validation failed. Please check your inputs.",
+        error: `Validation failed: ${details}`,
       };
     }
     return {
@@ -807,8 +813,14 @@ export const updateElection = async (
   } catch (error) {
     console.error("Update election error:", error);
     if (error instanceof z.ZodError) {
+      const details = error.errors
+        .map((issue) => {
+          const field = issue.path.join(".") || "form";
+          return `${field}: ${issue.message}`;
+        })
+        .join(" | ");
       return {
-        error: "Validation failed. Please check your inputs.",
+        error: `Validation failed: ${details}`,
       };
     }
     return {
