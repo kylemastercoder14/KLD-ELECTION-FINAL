@@ -47,13 +47,45 @@ export const ElectionValidators = z
     voterRestriction: z.nativeEnum(VoterRestriction),
   })
 
-  // Election Start Date must be today or future
+  // Election Start Date/Time must be now or in the future
   .refine(
-    (data) =>
-      data.electionStartDate >= new Date(new Date().setHours(0, 0, 0, 0)),
+    (data) => {
+      const startDateTime = new Date(data.electionStartDate);
+      if (data.electionStartTime) {
+        const [startHour, startMin] = data.electionStartTime.split(":");
+        startDateTime.setHours(parseInt(startHour) || 0, parseInt(startMin) || 0, 0, 0);
+      }
+
+      const now = new Date();
+      return startDateTime >= now;
+    },
     {
-      message: "Election start date must be today or in the future.",
+      message: "Election start date/time must be now or in the future.",
       path: ["electionStartDate"],
+    }
+  )
+
+  // Election end must be after election start (date + time)
+  .refine(
+    (data) => {
+      const startDateTime = new Date(data.electionStartDate);
+      const endDateTime = new Date(data.electionEndDate);
+
+      if (data.electionStartTime) {
+        const [startHour, startMin] = data.electionStartTime.split(":");
+        startDateTime.setHours(parseInt(startHour) || 0, parseInt(startMin) || 0, 0, 0);
+      }
+
+      if (data.electionEndTime) {
+        const [endHour, endMin] = data.electionEndTime.split(":");
+        endDateTime.setHours(parseInt(endHour) || 0, parseInt(endMin) || 0, 0, 0);
+      }
+
+      return endDateTime > startDateTime;
+    },
+    {
+      message: "Election end date/time must be after election start date/time.",
+      path: ["electionEndDate"],
     }
   )
 
